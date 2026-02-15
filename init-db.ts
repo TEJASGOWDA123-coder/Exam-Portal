@@ -30,6 +30,7 @@ async function init() {
                 start_time TEXT NOT NULL,
                 end_time TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'upcoming',
+                proctoring_enabled INTEGER NOT NULL DEFAULT 0,
                 created_by TEXT NOT NULL REFERENCES users(id),
                 created_at INTEGER NOT NULL
             )

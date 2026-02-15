@@ -16,6 +16,8 @@ export interface Question {
   questionImage?: string; // Base64
   options?: { text: string; image?: string }[];
   correctAnswer: string; // indices "0", "0,1" or literal text for type="text"
+  section: string;
+  marks: number;
 }
 
 export interface Exam {
@@ -26,6 +28,8 @@ export interface Exam {
   startTime: string;
   endTime: string;
   status: "active" | "upcoming" | "completed";
+  proctoringEnabled?: boolean | number;
+  sectionsConfig?: { name: string; pickCount: number }[];
   questions: Question[];
 }
 
@@ -49,6 +53,7 @@ export interface Submission {
   section: string;
   score: number;
   violations: number;
+  sectionScores?: Record<string, number>;
   submittedAt: string | Date;
 }
 

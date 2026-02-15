@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
+import os from "os";
 
 export async function POST(req: Request) {
     try {
@@ -15,10 +16,10 @@ export async function POST(req: Request) {
             );
         }
 
-        // Save file temporarily
+        // Save file temporarily using OS temp dir
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempPath = join("/tmp", `pdf-${Date.now()}.pdf`);
+        const tempPath = join(os.tmpdir(), `pdf-${Date.now()}.pdf`);
 
         await writeFile(tempPath, buffer);
 

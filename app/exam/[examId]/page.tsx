@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -84,7 +85,10 @@ export default function ExamEntry() {
   }, [student, examId, router]);
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-10 relative">
+      <div className="absolute top-4 right-4 z-10">
+        <ModeToggle />
+      </div>
       <div className="w-full max-w-md animate-slide-up">
         <div className="bg-card rounded-2xl shadow-elevated p-8">
           <div className="text-center mb-8">

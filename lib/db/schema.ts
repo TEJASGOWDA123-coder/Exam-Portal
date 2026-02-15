@@ -34,6 +34,8 @@ export const exams = sqliteTable("exams", {
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
   status: text("status", { enum: ["active", "upcoming", "completed"] }).notNull().default("upcoming"),
+  proctoringEnabled: integer("proctoring_enabled").notNull().default(0), // 0 for disabled, 1 for enabled
+  sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number }[]
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
@@ -46,6 +48,8 @@ export const questions = sqliteTable("questions", {
   questionImage: text("question_image"), // Base64 string
   options: text("options"), // JSON string: { text: string, image?: string }[]
   correctAnswer: text("correct_answer").notNull(),
+  section: text("section").notNull().default("General"),
+  marks: integer("marks").notNull().default(1),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
@@ -60,6 +64,7 @@ export const submissions = sqliteTable("submissions", {
   section: text("section").notNull(),
   score: integer("score").notNull(),
   violations: integer("violations").notNull().default(0),
+  sectionScores: text("section_scores"), // JSON string: { [sectionName: string]: number }
   submittedAt: integer("submitted_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => {
   return [

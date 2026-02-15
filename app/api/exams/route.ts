@@ -18,8 +18,23 @@ export async function GET() {
                     .from(questions)
                     .where(eq(questions.examId, exam.id));
 
+                const now = new Date();
+                const start = new Date(exam.startTime);
+                const end = new Date(exam.endTime);
+
+                let status = exam.status;
+                if (now < start) {
+                    status = "upcoming";
+                } else if (now >= start && now <= end) {
+                    status = "active";
+                } else {
+                    status = "completed";
+                }
+
                 return {
                     ...exam,
+                    status,
+                    sectionsConfig: typeof exam.sectionsConfig === "string" ? JSON.parse(exam.sectionsConfig) : (exam.sectionsConfig || []),
                     questions: examQuestions.map(q => ({
                         id: q.id,
                         type: q.type,
@@ -47,7 +62,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, questions: examQuestions } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, questions: examQuestions } = data;
 
         await db.transaction(async (tx) => {
             const existingExam = await tx.query.exams.findFirst({
@@ -62,7 +77,9 @@ export async function POST(req: Request) {
                         totalMarks,
                         startTime,
                         endTime,
-                        status
+                        status,
+                        proctoringEnabled: proctoringEnabled ? 1 : 0,
+                        sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null
                     })
                     .where(eq(exams.id, id));
                 await tx.delete(questions).where(eq(questions.examId, id));
@@ -75,6 +92,8 @@ export async function POST(req: Request) {
                     startTime,
                     endTime,
                     status,
+                    proctoringEnabled: proctoringEnabled ? 1 : 0,
+                    sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null
                 });
             }
 

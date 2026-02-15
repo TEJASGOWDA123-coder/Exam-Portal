@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { examId, studentName, usn, email, class: studentClass, section, score, violations } = data;
+        const { examId, studentName, usn, email, class: studentClass, section, score, violations, sectionScores } = data;
 
         // Check if student already submitted for this exam
         const existing = await db.query.submissions.findFirst({
@@ -70,6 +70,7 @@ export async function POST(req: Request) {
             section,
             score,
             violations,
+            sectionScores: sectionScores ? JSON.stringify(sectionScores) : null
         });
 
         return NextResponse.json({ success: true });

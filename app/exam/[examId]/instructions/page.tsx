@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { useExam } from "@/hooks/contexts/ExamContext";
 import { useSession } from "next-auth/react";
 
@@ -61,7 +62,10 @@ export default function Instructions() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12 relative">
+      <div className="absolute top-4 right-4 z-10">
+        <ModeToggle />
+      </div>
       <div className="w-full max-w-xl animate-fade-in">
         <div className="bg-card rounded-2xl shadow-elevated p-8 border border-border">
           <div className="flex justify-between items-start mb-2">

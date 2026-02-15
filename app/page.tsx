@@ -3,13 +3,17 @@ import { GraduationCap, Shield, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useExam } from "@/hooks/contexts/ExamContext";
+import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 
 const Index = () => {
   const { exams } = useExam();
   const demoExam = exams.find(e => e.status === "active") || exams[0];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <div className="absolute top-4 right-4 z-10">
+        <ModeToggle />
+      </div>
       {/* Hero */}
       <div className="flex-1 gradient-hero flex items-center justify-center px-4">
         <div className="text-center max-w-2xl animate-fade-in">
@@ -27,20 +31,10 @@ const Index = () => {
             <Button
               asChild
               size="lg"
-              className="border-primary-foreground/30 text-primary-foreground  font-bold px-8"
+              className="gradient-primary text-primary-foreground font-bold px-10 h-12 rounded-full shadow-elevated hover:opacity-90 transition-all"
             >
               <Link href="/admin">Admin Dashboard</Link>
             </Button>
-            {demoExam && (
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-bold px-8"
-              >
-                <Link href={`/exam/${demoExam.id}`}>Take an Exam</Link>
-              </Button>
-            )}
           </div>
         </div>
       </div>

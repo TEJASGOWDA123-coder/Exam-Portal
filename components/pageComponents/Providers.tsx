@@ -13,7 +13,7 @@ import { SessionProvider } from "next-auth/react";
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <ExamProvider>{children}</ExamProvider>
         <Toaster position="top-right" />
       </ThemeProvider>
