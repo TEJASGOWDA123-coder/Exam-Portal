@@ -1,12 +1,15 @@
 import { Question } from "@/hooks/contexts/ExamContext";
 import { Label } from "@/components/ui/label";
+import { Send } from "lucide-react";
 
 interface QuestionCardProps {
   question: Question;
   index: number;
   total: number;
   selectedAnswer: number | number[] | string | null;
-  onSelect: (answer: number | string) => void;
+  onSelect: (answer: number | string | number[]) => void;
+  justification?: string;
+  onJustify?: (text: string) => void;
 }
 
 export default function QuestionCard({
@@ -15,6 +18,8 @@ export default function QuestionCard({
   total,
   selectedAnswer,
   onSelect,
+  justification,
+  onJustify,
 }: QuestionCardProps) {
   const isMulti = Array.isArray(question.correctAnswer);
 
@@ -89,6 +94,26 @@ export default function QuestionCard({
             onChange={(e) => onSelect(e.target.value)} // Removed 'as any' and passed string directly
           />
           <p className="text-[10px] text-muted-foreground italic">Note: Your answer will be validated against the correct response set by the admin.</p>
+        </div>
+      )}
+
+      {question.requiresJustification && (
+        <div className="mt-8 pt-8 border-t border-border space-y-4">
+          <div className="flex items-center gap-3">
+             <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                <Send className="h-4 w-4 text-amber-600" />
+             </div>
+             <div className="flex flex-col">
+                <Label className="text-sm font-bold text-foreground">Explain Your Reasoning</Label>
+                <span className="text-[10px] font-medium text-muted-foreground">AI will validate your justification based on the correct answer.</span>
+             </div>
+          </div>
+          <textarea
+            className="w-full min-h-[100px] p-4 rounded-xl border-2 border-border bg-background focus:border-amber-500 focus:ring-0 outline-none transition-all text-sm font-medium"
+            placeholder="Why is this answer correct? Provide a brief explanation..."
+            value={justification || ""}
+            onChange={(e) => onJustify?.(e.target.value)}
+          />
         </div>
       )}
     </div>

@@ -27,7 +27,6 @@ export default function CreateExam() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [proctoringEnabled, setProctoringEnabled] = useState(false);
-  const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
   const { addExam } = useExam();
   const router = useRouter();
   const { data: session } = useSession();
@@ -66,7 +65,6 @@ export default function CreateExam() {
       endTime,
       status: "upcoming",
       proctoringEnabled,
-      sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
       questions: [],
     };
     const success = await addExam(exam);
@@ -106,11 +104,8 @@ export default function CreateExam() {
             <TabsTrigger value="timing" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
               02. Chronology
             </TabsTrigger>
-            <TabsTrigger value="sections" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              03. Sections
-            </TabsTrigger>
             <TabsTrigger value="proctoring" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              04. Integrity
+              03. Integrity
             </TabsTrigger>
           </TabsList>
 
@@ -183,70 +178,7 @@ export default function CreateExam() {
             </div>
           </TabsContent>
 
-          <TabsContent value="sections" className="mt-0 focus-visible:outline-none">
-            <div className="space-y-6">
-               <div className="rounded-[2rem] bg-emerald-500/5 p-8 border border-emerald-500/10 dark:bg-emerald-500/5 dark:border-emerald-500/20 shadow-sm">
-                  <div className="flex items-center gap-4 mb-4 text-emerald-600">
-                     <Sparkles className="h-6 w-6" />
-                     <h4 className="font-black text-lg tracking-tight uppercase tracking-widest">Section Control</h4>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-bold italic">
-                     Define the architectural boundaries of your assessment sections. AI will use these constraints to curate dynamic matrix for each student.
-                  </p>
-               </div>
 
-                <div className="space-y-4">
-                  {sectionsConfig.map((sec, idx) => (
-                    <div key={idx} className="group relative flex flex-col md:flex-row items-end gap-6 p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm transition-all hover:shadow-2xl dark:bg-emerald-950/20 dark:border-emerald-500/10">
-                      <div className="flex-1 space-y-3 w-full">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Dimension Identifier</Label>
-                        <Input 
-                          value={sec.name} 
-                          onChange={(e) => {
-                            const next = [...sectionsConfig];
-                            next[idx].name = e.target.value;
-                            setSectionsConfig(next);
-                          }}
-                          placeholder="e.g. Numerical Aptitude"
-                          className="h-14 rounded-2xl border-slate-100 font-black text-emerald-600 focus:ring-4 focus:ring-emerald-500/5 bg-slate-50/30"
-                        />
-                      </div>
-                      <div className="w-full md:w-36 space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Pick Count</Label>
-                        <Input 
-                          type="number"
-                          value={sec.pickCount} 
-                          onChange={(e) => {
-                            const next = [...sectionsConfig];
-                            next[idx].pickCount = parseInt(e.target.value) || 0;
-                            setSectionsConfig(next);
-                          }}
-                          className="h-14 rounded-2xl border-slate-100 font-black text-center focus:ring-4 focus:ring-emerald-500/5 bg-slate-50/30"
-                        />
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-14 w-14 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
-                        onClick={() => setSectionsConfig(sectionsConfig.filter((_, i) => i !== idx))}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
-                    </div>
-                  ))}
-                  
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full h-20 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-slate-400 font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 hover:border-emerald-200 hover:text-emerald-500 dark:border-slate-800 dark:hover:bg-slate-800/10 transition-all group"
-                    onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10 }])}
-                  >
-                    <Plus className="w-5 h-5 mr-4 group-hover:rotate-90 transition-transform" />
-                    Add Section
-                  </Button>
-               </div>
-            </div>
-          </TabsContent>
 
           <TabsContent value="proctoring" className="mt-0 focus-visible:outline-none">
              <div className="space-y-6">

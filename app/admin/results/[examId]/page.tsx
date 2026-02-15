@@ -15,8 +15,20 @@ import {
   CheckCircle2,
   Trophy,
   Users,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  FileSearch,
+  Check,
+  X as XIcon,
+  Sparkles as SparklesIcon
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useExam } from "@/hooks/contexts/ExamContext";
 import { format } from "date-fns";
@@ -32,6 +44,9 @@ export default function ViewResults() {
   const [fClass, setFClass] = useState("all");
   const [fSection, setFSection] = useState("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [validatingJustification, setValidatingJustification] = useState<Record<string, boolean>>({});
+  const [aiFeedbacks, setAiFeedbacks] = useState<Record<string, any>>({});
 
   const currentExam = exams.find((e) => e.id === examId);
 
@@ -109,6 +124,24 @@ export default function ViewResults() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
     XLSX.writeFile(workbook, `results-${examId}-${Date.now()}.xlsx`);
     toast.success("Excel Exported");
+  };
+
+  const validateAI = async (qId: string, qText: string, correct: string, just: string) => {
+    setValidatingJustification(prev => ({ ...prev, [qId]: true }));
+    try {
+      const resp = await fetch("/api/ai/validate-justification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: qText, correctAnswer: correct, studentJustification: just })
+      });
+      const data = await resp.json();
+      setAiFeedbacks(prev => ({ ...prev, [`${selectedSubmission.id}-${qId}`]: data }));
+      toast.success("Analysis Complete");
+    } catch (e) {
+      toast.error("AI Validation Failed");
+    } finally {
+      setValidatingJustification(prev => ({ ...prev, [qId]: false }));
+    }
   };
 
   return (
@@ -262,6 +295,98 @@ export default function ViewResults() {
             </table>
          </div>
       </section>
+
+      {/* Analysis Modal */}
+      <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] p-0 border-none shadow-2xl">
+          <div className="bg-slate-50 dark:bg-slate-950 p-10 border-b">
+             <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                   <div className="h-16 w-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-2xl">
+                      {selectedSubmission?.studentName.charAt(0)}
+                   </div>
+                   <div>
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">{selectedSubmission?.studentName}</h2>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedSubmission?.usn} • Evaluation Report</p>
+                   </div>
+                </div>
+                <div className="text-right">
+                   <p className="text-4xl font-black text-slate-900 dark:text-white">{selectedSubmission?.score}</p>
+                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Points Secured</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="p-10 space-y-10">
+             {currentExam?.questions.map((q, idx) => {
+                const justs = typeof selectedSubmission?.justifications === 'string' ? JSON.parse(selectedSubmission.justifications) : selectedSubmission?.justifications || {};
+                const studentJust = justs[q.id];
+                const feedback = aiFeedbacks[`${selectedSubmission?.id}-${q.id}`];
+                const isValidating = validatingJustification[q.id];
+
+                return (
+                   <div key={q.id} className="group relative">
+                      <div className="flex items-start gap-8">
+                         <div className="flex flex-col items-center gap-2 pt-1">
+                            <span className="text-[10px] font-black text-slate-300">Q{idx + 1}</span>
+                            <div className="w-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                         </div>
+                         <div className="flex-1 space-y-6 pb-10 border-b border-slate-50 dark:border-slate-800">
+                            <div>
+                               <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">{q.question}</h4>
+                               <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded dark:bg-slate-800">Section: {q.section}</span>
+                            </div>
+
+                            {q.requiresJustification ? (
+                               <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm dark:bg-slate-900/50 dark:border-slate-800">
+                                  <div className="flex items-center justify-between mb-6">
+                                     <div className="flex items-center gap-3">
+                                        <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                           <SparklesIcon className="w-4 h-4 text-amber-600" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Student Justification</span>
+                                     </div>
+                                     <Button 
+                                       size="sm" 
+                                       disabled={isValidating || !studentJust}
+                                       onClick={() => validateAI(q.id, q.question, q.correctAnswer, studentJust)}
+                                       className="h-9 px-6 rounded-xl bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 transition-all hover:text-slate-950"
+                                     >
+                                        {isValidating ? <RefreshCw className="w-3 h-3 animate-spin mr-2" /> : <CheckCircle2 className="w-3 h-3 mr-2" />}
+                                        {feedback ? "Re-Analyze" : "AI Validate"}
+                                     </Button>
+                                  </div>
+                                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 italic mb-6 leading-relaxed">
+                                     "{studentJust || "No justification provided by student."}"
+                                  </p>
+
+                                  {feedback && (
+                                     <div className={`p-6 rounded-2xl border flex items-start gap-4 animate-in slide-in-from-top-2 duration-500 ${feedback.isValid ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20' : 'bg-red-50 border-red-100 dark:bg-red-500/5 dark:border-red-500/20'}`}>
+                                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${feedback.isValid ? 'bg-emerald-500 text-slate-950' : 'bg-red-500 text-white'}`}>
+                                           {feedback.isValid ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
+                                        </div>
+                                        <div>
+                                           <div className="flex items-center gap-3 mb-1">
+                                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">AI Feedback</span>
+                                              <span className="text-[10px] font-black text-slate-400 opacity-30">•</span>
+                                              <span className="text-[10px] font-black text-slate-900 dark:text-white">Reasoning Score: {feedback.score}/10</span>
+                                           </div>
+                                           <p className={`text-xs font-bold ${feedback.isValid ? 'text-emerald-700' : 'text-red-700'}`}>{feedback.feedback}</p>
+                                        </div>
+                                     </div>
+                                  )}
+                               </div>
+                            ) : (
+                               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">No justification required for this item</p>
+                            )}
+                         </div>
+                      </div>
+                   </div>
+                );
+             })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

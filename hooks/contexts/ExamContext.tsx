@@ -18,6 +18,7 @@ export interface Question {
   correctAnswer: string; // indices "0", "0,1" or literal text for type="text"
   section: string;
   marks: number;
+  requiresJustification?: boolean;
 }
 
 export interface Exam {
@@ -54,6 +55,7 @@ export interface Submission {
   score: number;
   violations: number;
   sectionScores?: Record<string, number>;
+  justifications?: Record<string, string>;
   submittedAt: string | Date;
 }
 

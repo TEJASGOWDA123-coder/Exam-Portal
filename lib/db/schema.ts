@@ -50,6 +50,7 @@ export const questions = sqliteTable("questions", {
   correctAnswer: text("correct_answer").notNull(),
   section: text("section").notNull().default("General"),
   marks: integer("marks").notNull().default(1),
+  requiresJustification: integer("requires_justification", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
@@ -65,6 +66,7 @@ export const submissions = sqliteTable("submissions", {
   score: integer("score").notNull(),
   violations: integer("violations").notNull().default(0),
   sectionScores: text("section_scores"), // JSON string: { [sectionName: string]: number }
+  justifications: text("justifications"), // JSON string: { [questionId: string]: string }
   submittedAt: integer("submitted_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => {
   return [

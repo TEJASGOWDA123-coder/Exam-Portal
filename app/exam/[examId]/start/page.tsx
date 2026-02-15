@@ -70,6 +70,7 @@ export default function ExamPage() {
   }, [exam]);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number | number[] | string>>({});
+  const [justifications, setJustifications] = useState<Record<string, string>>({});
   const [violations, setViolations] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -138,6 +139,7 @@ export default function ExamPage() {
       score,
       violations,
       sectionScores: sectionalResults,
+      justifications,
       totalMarks: exam.totalMarks,
       submittedAt: new Date(),
     } as any);
@@ -315,6 +317,8 @@ export default function ExamPage() {
               index={currentQ}
               total={shuffledQuestions.length}
               selectedAnswer={answers[question.id] ?? null}
+              justification={justifications[question.id] ?? ""}
+              onJustify={(text) => setJustifications((prev) => ({ ...prev, [question.id]: text }))}
               onSelect={(val) => {
                 if (question.type === "msq") {
                   setAnswers((prev) => {

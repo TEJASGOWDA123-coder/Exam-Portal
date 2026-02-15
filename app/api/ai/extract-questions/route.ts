@@ -16,8 +16,8 @@ export async function POST(req: Request) {
             );
         }
 
-        // Double the requested count for the pool
-        const targetCount = (count || 5) * 2;
+        // Increase the multiplier for a larger randomization pool as per user request (Gemini suggestion)
+        const targetCount = (count || 5) * 4;
 
         const prompt = `You are a RAG (Retrieval-Augmented Generation) agent specializing in educational assessment.
 Your task is to analyze the provided text extracted from a document and frame high-quality multiple-choice questions based on its content.
@@ -32,16 +32,17 @@ Difficulty Level: ${difficulty || "Medium"}
 
 Instructions:
 1. Thoroughly understand the concepts, facts, and logic in the provided text.
-2. Frame exactly ${targetCount} high-quality questions at a ${difficulty || "Medium"} difficulty level.
-3. CRITICAL: You MUST assign each question to one of the following Target Sections: ${sections ? sections.join(", ") : "General"}.
-4. Carefully analyze the content of each question and map it to the most relevant section from the list above. 
-5. If the Target Sections are specific topics (e.g., "History", "Science"), ensure the question content strictly matches the section.
-6. Ensure that for every question, one and only one option is unmistakably correct based on the text.
-7. Distractors (incorrect options) should be plausible but clearly wrong.
-8. If the text contains specific data, dates, or technical terms, use them accurately.
+2. If the text contains a Reading Comprehension passage, you MUST include the relevant portion of that passage at the beginning of the "question" field followed by the specific question.
+3. Frame exactly ${targetCount} high-quality questions at a ${difficulty || "Medium"} difficulty level.
+4. CRITICAL: You MUST assign each question to one of the following Target Sections: ${sections ? sections.join(", ") : "General"}.
+5. Carefully analyze the content of each question and map it to the most relevant section from the list above. 
+6. If the Target Sections are specific topics (e.g., "History", "Science"), ensure the question content strictly matches the section.
+7. Ensure that for every question, one and only one option is unmistakably correct based on the text.
+8. Distractors (incorrect options) should be plausible but clearly wrong.
+9. If the text contains specific data, dates, or technical terms, use them accurately.
 
 For each question, provide:
-- A clear, concise question
+- A clear, concise question (including any necessary passage context)
 - Four distinct options labeled A, B, C, D
 - The correct answer (A, B, C, or D)
 - The section name this question belongs to (MUST be EXACTLY one from: ${sections ? sections.join(", ") : "General"}).
@@ -49,7 +50,7 @@ For each question, provide:
 Format your response as a JSON array with this exact structure:
 [
   {
-    "question": "question text here",
+    "question": "question text (with passage context if applicable)",
     "optionA": "choice 1",
     "optionB": "choice 2",
     "optionC": "choice 3",

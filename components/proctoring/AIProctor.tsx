@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState,memo } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface AIProctorProps {
   onViolation: (reason: string, points: number) => void;
 }
-
-export default function AIProctor({ onViolation }: AIProctorProps) {
+ function AIProctor ({ onViolation }: AIProctorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
@@ -269,3 +268,6 @@ export default function AIProctor({ onViolation }: AIProctorProps) {
     </div>
   );
 }
+
+
+export default memo(AIProctor)

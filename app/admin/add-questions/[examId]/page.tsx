@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Loading from "@/components/Loading"
 import { 
   Trash2, 
   Plus, 
@@ -38,10 +39,13 @@ export default function AddQuestions() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [componentLoading,setComponentLoading] = useState(false);
 
   useEffect(() => {
     if (exam && !initialized) {
       setQuestions(exam.questions || []);
+      setLocalSectionsConfig(exam.sectionsConfig || []);
+      setLocalTotalMarks(String(exam.totalMarks || 100));
       setInitialized(true);
     }
   }, [exam, initialized]);
@@ -55,9 +59,12 @@ export default function AddQuestions() {
   const [correctAnswer, setCorrectAnswer] = useState("0");
   const [qSection, setQSection] = useState("General");
   const [qMarks, setQMarks] = useState("1");
+  const [localSectionsConfig, setLocalSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
+  const [localTotalMarks, setLocalTotalMarks] = useState<string>("100");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [requiresJustification, setRequiresJustification] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [aiTopic, setAiTopic] = useState("");
@@ -92,6 +99,7 @@ export default function AddQuestions() {
       return;
     }
     setAiGenerating(true);
+    setComponentLoading(true);
     const toastId = toast.loading("AI generating...");
     try {
       const response = await fetch("/api/ai/extract-questions", {
@@ -124,6 +132,7 @@ export default function AddQuestions() {
       toast.error("Generation failed", { id: toastId });
     } finally {
       setAiGenerating(false);
+      setComponentLoading(false);
     }
   };
 
@@ -141,6 +150,7 @@ export default function AddQuestions() {
       correctAnswer: correctAnswer,
       section: qSection,
       marks: parseInt(qMarks) || 1,
+      requiresJustification: requiresJustification,
     };
     if (editingId) {
       setQuestions((prev) => prev.map((q) => (q.id === editingId ? newQ : q)));
@@ -160,6 +170,7 @@ export default function AddQuestions() {
     setCorrectAnswer("0");
     setQSection("General");
     setQMarks("1");
+    setRequiresJustification(false);
     setEditingId(null);
   };
 
@@ -174,6 +185,7 @@ export default function AddQuestions() {
     setCorrectAnswer(q.correctAnswer);
     setQSection(q.section || "General");
     setQMarks(String(q.marks || 1));
+    setRequiresJustification(q.requiresJustification || false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -182,19 +194,23 @@ export default function AddQuestions() {
     if (!file) return;
     setUploading(true);
     const toastId = toast.loading("Analyzing...");
+    setComponentLoading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
       const parseResp = await fetch("/api/parse-pdf", { method: "POST", body: formData });
       if (!parseResp.ok) throw new Error("Parse failed");
       const { text } = await parseResp.json();
+      const sectionNames = exam?.sectionsConfig?.map(s => s.name) || ["General"];
+
       const extractResp = await fetch("/api/ai/extract-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           text,
           count: parseInt(aiCount),
-          sections: exam?.sectionsConfig?.map(s => s.name) || ["General"]
+          sections: sectionNames,
+          difficulty: aiDifficulty
         }),
       });
       if (!extractResp.ok) throw new Error("Extraction failed");
@@ -214,6 +230,7 @@ export default function AddQuestions() {
       toast.error(err.message, { id: toastId });
     } finally {
       setUploading(false);
+      setComponentLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -226,9 +243,17 @@ export default function AddQuestions() {
   };
 
   const saveAll = async () => {
-    if (!exam) return;
+    if (!exam) {
+      toast.error("Exam data not found");
+      return;
+    }
     setSaving(true);
-    const success = await updateExam({ ...exam, questions });
+    const success = await updateExam({ 
+      ...exam, 
+      questions,
+      sectionsConfig: localSectionsConfig.length > 0 ? localSectionsConfig : undefined,
+      totalMarks: parseInt(localTotalMarks) || 100
+    });
     setSaving(false);
     if (success) toast.success("Saved!");
     else toast.error("Failed");
@@ -244,7 +269,7 @@ export default function AddQuestions() {
   ]));
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans ">
       <header className="sticky top-0 z-50 w-full border-b bg-white/70 backdrop-blur-md dark:bg-slate-950/70 dark:border-slate-800">
         <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -274,6 +299,73 @@ export default function AddQuestions() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Editor */}
           <div className="lg:col-span-7 space-y-6">
+             {/* Unified Section & Marks Control */}
+              <div className="bg-white dark:bg-slate-900 border p-6 rounded-xl shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b pb-4">
+                  <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4 text-emerald-600" /> Exam Architecture
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-black uppercase text-slate-400">Total Marks</Label>
+                    <Input 
+                      type="number" 
+                      value={localTotalMarks} 
+                      onChange={(e) => setLocalTotalMarks(e.target.value)}
+                      className="h-8 w-16 text-center text-xs font-bold bg-slate-50 border-emerald-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section Control</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 text-emerald-600 text-[10px] font-bold"
+                        onClick={() => setLocalSectionsConfig([...localSectionsConfig, { name: "", pickCount: 5 }])}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Section
+                      </Button>
+                   </div>
+
+                   <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                      {localSectionsConfig.length === 0 ? (
+                        <p className="text-[10px] text-slate-400 italic text-center py-4 border-2 border-dashed rounded-lg">No automated section rules defined.</p>
+                      ) : localSectionsConfig.map((sec, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                          <Input 
+                            value={sec.name}
+                            onChange={(e) => {
+                              const next = [...localSectionsConfig];
+                              next[idx].name = e.target.value;
+                              setLocalSectionsConfig(next);
+                            }}
+                            placeholder="Section Name"
+                            className="h-8 bg-white text-[10px] font-bold rounded-lg"
+                          />
+                          <Input 
+                            type="number"
+                            value={sec.pickCount}
+                            onChange={(e) => {
+                              const next = [...localSectionsConfig];
+                              next[idx].pickCount = parseInt(e.target.value) || 0;
+                              setLocalSectionsConfig(next);
+                            }}
+                            placeholder="Pick"
+                            className="w-fit text-center text-[10px] font-bold bg-white rounded-lg"
+                          />
+                          <button 
+                            onClick={() => setLocalSectionsConfig(localSectionsConfig.filter((_, i) => i !== idx))}
+                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              </div>
             <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden transition-all">
               <div className="border-b p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
                 <div className="flex items-center gap-3">
@@ -308,6 +400,27 @@ export default function AddQuestions() {
                     <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Points</Label>
                     <Input type="number" value={qMarks} onChange={(e) => setQMarks(e.target.value)} min="1" className="h-10 text-sm font-bold bg-white dark:bg-slate-800" />
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-500/5">
+                   <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                         <Sparkles className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="flex flex-col">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">AI Validation</span>
+                         <span className="text-[9px] font-bold text-emerald-600/60 leading-none">Require Student Justification</span>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-slate-400">{requiresJustification ? "ENABLED" : "DISABLED"}</span>
+                      <button 
+                        onClick={() => setRequiresJustification(!requiresJustification)}
+                        className={cn("w-10 h-5 rounded-full relative transition-all", requiresJustification ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700")}
+                      >
+                        <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all", requiresJustification ? "left-5.5" : "left-0.5")} />
+                      </button>
+                   </div>
                 </div>
 
                 {qSection === "NEW" && (
@@ -432,16 +545,16 @@ export default function AddQuestions() {
                     <div className="space-y-1">
                       <Label className="text-[8px] uppercase tracking-widest opacity-60">Level</Label>
                       <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} className="h-8 w-full bg-white/10 border-white/20 rounded-md text-[10px] font-bold px-2 outline-none">
-                        <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="mixed">Mixed</option>
+                        <option value="easy" className="bg-emerald-600">Easy</option><option value="medium" className="bg-emerald-600">Medium</option><option value="hard" className="bg-emerald-600">Hard</option><option value="mixed" className="bg-emerald-600 ">Mixed</option>
                       </select>
-                    </div>
+                    </div>    
                   </div>
                   <Button className="w-full h-9 bg-white text-emerald-600 font-bold text-xs uppercase hover:bg-slate-100" onClick={handleAiGenerate} disabled={aiGenerating}>
                     {aiGenerating ? "Generating..." : "Generate AI Questions"}
                   </Button>
-                </div>
+                </div>        
               </div>
-
+              
               <div className="bg-white dark:bg-slate-900 border p-6 rounded-xl shadow-sm space-y-4">
                 <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <FileText className="w-4 h-4 text-slate-400" /> RAG Agent
@@ -505,6 +618,11 @@ export default function AddQuestions() {
                                   <div className="flex items-center gap-2">
                                     <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border dark:bg-slate-800">{q.type}</span>
                                     <span className="text-[8px] font-bold text-emerald-600">{q.marks} Pts</span>
+                                    {q.requiresJustification && (
+                                      <span className="flex items-center gap-1 text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                                        <Sparkles className="w-2 h-2" /> JUSTIFIED
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button onClick={() => editQuestion(q.id)} className="p-1.5 hover:text-emerald-600 text-slate-300 transition-colors"><SquarePen className="w-3.5 h-3.5" /></button>
@@ -536,6 +654,7 @@ export default function AddQuestions() {
                   ))
                 )}
               </div>
+        {componentLoading && <Loading/>}
             </div>
           </div>
         </div>
