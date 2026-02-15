@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { db } from "@/lib/db";
+import { sections } from "@/lib/db/schema";
 
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
@@ -7,66 +9,86 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
     try {
-        const { text, count, sections, difficulty } = await req.json();
+        const { text, count, difficulty, mode = "extract", blueprint } = await req.json();
 
         if (!text) {
-            return NextResponse.json(
-                { error: "No text provided" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "No text provided" }, { status: 400 });
         }
 
-        // Increase the multiplier for a larger randomization pool as per user request (Gemini suggestion)
-        const targetCount = (count || 5) * 4;
+        // Fetch All Available Sections for Dynamic Classification
+        const activeSections = await db.select().from(sections);
+        const sectionContext = activeSections.map(s => `
+Section ID: ${s.id}
+Name: ${s.name}
+Description: ${s.description}
+Identity: ${s.identityPrompt}
+Transformation Rule: ${s.transformationPrompt}
+Validation Rules: ${s.validationRules || "None"}
+`).join("\n---\n");
 
-        const prompt = `You are a RAG (Retrieval-Augmented Generation) agent specializing in educational assessment.
-Your task is to analyze the provided text extracted from a document and frame high-quality multiple-choice questions based on its content.
+        const isGenerate = mode === "generate";
 
-Content to analyze:
+        const prompt = `
+You are a Section-Aware RAG Intelligence Agent. 
+Your task is to analyze raw OCR text from an exam PDF and ${isGenerate ? "generate a MIXTURE of extracted and NEW" : "extract"} high-quality structured questions.
+
+Raw Text:
 """
 ${text}
 """
 
-Target Sections: ${sections ? sections.join(", ") : "General"}
-Difficulty Level: ${difficulty || "Medium"}
+Available Section Identities & Rules:
+---
+${sectionContext}
 
 Instructions:
-1. Thoroughly understand the concepts, facts, and logic in the provided text.
-2. If the text contains a Reading Comprehension passage, you MUST include the relevant portion of that passage at the beginning of the "question" field followed by the specific question.
-3. Frame exactly ${targetCount} high-quality questions at a ${difficulty || "Medium"} difficulty level.
-4. CRITICAL: You MUST assign each question to one of the following Target Sections: ${sections ? sections.join(", ") : "General"}.
-5. Carefully analyze the content of each question and map it to the most relevant section from the list above. 
-6. If the Target Sections are specific topics (e.g., "History", "Science"), ensure the question content strictly matches the section.
-7. Ensure that for every question, one and only one option is unmistakably correct based on the text.
-8. Distractors (incorrect options) should be plausible but clearly wrong.
-9. If the text contains specific data, dates, or technical terms, use them accurately.
+1. Structure Analyzer: Segment the text into individual questions or core concepts.
+2. Section Classifier: Based on the content and the "Available Section Identities & Rules" above, assign each question to the most appropriate section_id.
+3. Regeneration & Synthesis Engine: 
+   ${isGenerate 
+     ? `- Provide a MIXTURE of questions: Some directly extracted (but reworded) from the PDF, and some NEWLY synthesized based on the concepts in the PDF.
+        - Ensure ALL questions are strictly relevant to the PDF's subject matter.
+        - Do not return the original text word-for-word.`
+     : `- Regenerate unique variations of the questions found in the PDF. Do not return the original text word-for-word.`
+   }
+4. Validation: Strictly adhere to the "Validation Rules" provided for each section (e.g., word count, keywords, format).
+5. Difficulty: ${difficulty || "Medium"}
+6. Target Architecture:
+   ${blueprint 
+     ? `You MUST generate EXACTLY the following number of questions for these specific sections:
+        ${(blueprint as any[]).map(b => `- ${b.name}: ${b.pickCount} questions`).join("\n        ")}`
+     : `Target Count: ${count || 10}`}
+
+IMPORTANT: You MUST return exactly ${blueprint ? (blueprint as any[]).reduce((sum, b) => sum + (b.pickCount || 0), 0) : (count || 10)} questions in total. If the raw text doesn't contain enough questions, use your intelligence to generate more until you reach the total target, following the concepts in the provided text.
 
 For each question, provide:
-- A clear, concise question (including any necessary passage context)
-- Four distinct options labeled A, B, C, D
-- The correct answer (A, B, C, or D)
-- The section name this question belongs to (MUST be EXACTLY one from: ${sections ? sections.join(", ") : "General"}).
+- question: The regenerated or synthesized question text.
+- optionA, optionB, optionC, optionD: Four clear options.
+- correctAnswer: A, B, C, or D.
+- sectionId: The ID of the assigned section.
+- solution: A brief explanation of the logic.
 
-Format your response as a JSON array with this exact structure:
+Format your response as a JSON array:
 [
   {
-    "question": "question text (with passage context if applicable)",
-    "optionA": "choice 1",
-    "optionB": "choice 2",
-    "optionC": "choice 3",
-    "optionD": "choice 4",
+    "question": "...",
+    "optionA": "...",
+    "optionB": "...",
+    "optionC": "...",
+    "optionD": "...",
     "correctAnswer": "A",
-    "section": "section name"
+    "sectionId": "...",
+    "solution": "..."
   }
 ]
 
-IMPORTANT: Return ONLY the JSON array. Do not include introductory text, explanations, or markdown code blocks other than the JSON itself. If no clear questions can be framed, return an empty array [].`;
+IMPORTANT: Return ONLY the JSON array.`;
 
         const completion = await groq.chat.completions.create({
             messages: [
                 {
                     role: "system",
-                    content: "You are an expert exam question extractor. You convert raw text into structured JSON multiple-choice questions and categorize them into sections.",
+                    content: `You are an expert at ${isGenerate ? "generating assessment questions based on source context" : "extracting and classifying exam questions from raw text"}. You always categorize questions based on the provided dynamic section identities and ${isGenerate ? "create a balanced mix of direct and synthesized questions" : "regenerate unique variants"}.`,
                 },
                 {
                     role: "user",
@@ -74,30 +96,34 @@ IMPORTANT: Return ONLY the JSON array. Do not include introductory text, explana
                 },
             ],
             model: "llama-3.3-70b-versatile",
-            temperature: 0.2,
+            temperature: isGenerate ? 0.4 : 0.2,
             max_tokens: 8192,
         });
 
         const content = completion.choices[0]?.message?.content;
-        if (!content) {
-            throw new Error("No content generated");
-        }
+        if (!content) throw new Error("No content generated");
 
         let jsonContent = content.trim();
         const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-            jsonContent = jsonMatch[0];
-        }
+        if (jsonMatch) jsonContent = jsonMatch[0];
 
-        const questions = JSON.parse(jsonContent);
+        const extractedQuestions = JSON.parse(jsonContent);
 
-        if (!Array.isArray(questions)) {
-            throw new Error("Invalid response format from AI");
-        }
+        if (!Array.isArray(extractedQuestions)) throw new Error("Invalid response format");
 
-        return NextResponse.json({ questions });
+        // Map back to display names for frontend compatibility if needed
+        const result = extractedQuestions.map(q => {
+            const section = activeSections.find(s => s.id === q.sectionId);
+            return {
+                ...q,
+                section: section?.name || "General",
+                source: "pdf"
+            };
+        });
+
+        return NextResponse.json({ questions: result });
     } catch (error: any) {
-        console.error("AI extraction error:", error);
+        console.error("RAG extraction error:", error);
         return NextResponse.json(
             { error: error.message || "Failed to extract questions" },
             { status: 500 }

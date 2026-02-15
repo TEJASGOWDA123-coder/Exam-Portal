@@ -10,6 +10,23 @@ interface AIProctorProps {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
+  const onViolationRef = useRef(onViolation);
+
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+  }, [onViolation]);
+
+  const addRisk = (points: number, reason: string) => {
+    onViolationRef.current?.(reason, points);
+    setActiveViolations(prev => {
+      if (prev.includes(reason)) return prev;
+      const next = [...prev, reason];
+      setTimeout(() => {
+        setActiveViolations(current => current.filter(r => r !== reason));
+      }, 3000);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let stream: MediaStream;
@@ -24,19 +41,6 @@ interface AIProctorProps {
     let lipOpenFrames = 0;
     let headTurnFrames = 0;
     let loudAudioFrames = 0;
-
-    const addRisk = (points: number, reason: string) => {
-      onViolation(reason, points);
-      setActiveViolations(prev => {
-        if (prev.includes(reason)) return prev;
-        const next = [...prev, reason];
-        setTimeout(() => {
-          setActiveViolations(current => current.filter(r => r !== reason));
-        }, 3000);
-        return next;
-      });
-    };
-
     const loadScript = (src: string) =>
       new Promise((resolve) => {
         const script = document.createElement("script");
@@ -225,7 +229,7 @@ interface AIProctorProps {
         faceMesh.close().catch(() => {});
       }
     };
-  }, [onViolation]);
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 items-center p-4 bg-card border border-border rounded-xl shadow-sm">

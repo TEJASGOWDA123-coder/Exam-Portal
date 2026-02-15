@@ -18,6 +18,7 @@ import {
   FilePlus,
   ClipboardList,
   GraduationCap,
+  LayoutTemplate
 } from "lucide-react";
 
 import {
@@ -54,13 +55,19 @@ const data = {
     {
       title: "Exam",
       url: "/admin/exam",
-      icon: ClipboardList,
+      icon: Brain,
       badge: null,
     },
     {
       title: "Results",
       url: "/admin/results",
-      icon: ClipboardList,
+      icon: Trophy,
+      badge: null,
+    },
+    {
+      title: "Section Templates",
+      url: "/admin/sections",
+      icon: LayoutTemplate,
       badge: null,
     },
     {

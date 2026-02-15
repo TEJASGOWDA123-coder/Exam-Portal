@@ -19,6 +19,7 @@ export interface Question {
   section: string;
   marks: number;
   requiresJustification?: boolean;
+  solution?: string;
 }
 
 export interface Exam {
@@ -30,6 +31,9 @@ export interface Exam {
   endTime: string;
   status: "active" | "upcoming" | "completed";
   proctoringEnabled?: boolean | number;
+  showResults?: boolean | number;
+  requireSeb?: boolean | number;
+  sebKey?: string;
   sectionsConfig?: { name: string; pickCount: number }[];
   questions: Question[];
 }

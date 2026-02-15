@@ -25,6 +25,22 @@ export const students = sqliteTable("students", {
 export type Student = typeof students.$inferSelect;
 export type NewStudent = typeof students.$inferInsert;
 
+// Sections table for Dynamic Identity Engine
+export const sections = sqliteTable("sections", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  identityPrompt: text("identity_prompt").notNull(),
+  transformationPrompt: text("transformation_prompt").notNull(),
+  validationRules: text("validation_rules"), // JSON string
+  outputSchema: text("output_schema"), // JSON string
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export type Section = typeof sections.$inferSelect;
+export type NewSection = typeof sections.$inferInsert;
+
 // Exams table
 export const exams = sqliteTable("exams", {
   id: text("id").primaryKey(),
@@ -35,22 +51,34 @@ export const exams = sqliteTable("exams", {
   endTime: text("end_time").notNull(),
   status: text("status", { enum: ["active", "upcoming", "completed"] }).notNull().default("upcoming"),
   proctoringEnabled: integer("proctoring_enabled").notNull().default(0), // 0 for disabled, 1 for enabled
+  showResults: integer("show_results").notNull().default(1), // 0 for hidden, 1 for visible
+  sebEnabled: integer("seb_enabled").notNull().default(0), // Deprecated
+  sebConfigKey: text("seb_config_key"), // Deprecated
+  requireSeb: integer("require_seb").notNull().default(0), // 0 for disabled, 1 for enabled
+  sebKey: text("seb_key"), // Auto-generated secure random key
   sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number }[]
+  blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
+  generatedQuestions: text("generated_questions"), // JSON string for specific student variants
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-// Questions table - refactored for dynamic options
+// Questions table - refactored for DSIE
 export const questions = sqliteTable("questions", {
   id: text("id").primaryKey(),
   examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  sectionId: text("section_id").references(() => sections.id),
+  section: text("section").notNull().default("General"), // Keep for legacy compatibility
   type: text("type", { enum: ["mcq", "msq", "text"] }).notNull().default("mcq"),
   question: text("question").notNull(),
   questionImage: text("question_image"), // Base64 string
   options: text("options"), // JSON string: { text: string, image?: string }[]
   correctAnswer: text("correct_answer").notNull(),
-  section: text("section").notNull().default("General"),
+  solution: text("solution"),
   marks: integer("marks").notNull().default(1),
   requiresJustification: integer("requires_justification", { mode: "boolean" }).notNull().default(false),
+  source: text("source", { enum: ["generated", "pdf"] }).notNull().default("generated"),
+  sourceId: text("source_id"), // Reference to PDF id or original question id for variations
+  embedding: text("embedding"), // Store vector embedding or JSON representation
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

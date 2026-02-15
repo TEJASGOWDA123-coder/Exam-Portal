@@ -22,8 +22,23 @@ import {
   ChevronRight,
   Zap,
   LayoutGrid,
-  X
+  X,
+  Settings2,
+  Workflow,
+  MessageSquare,
+  ShieldCheck,
+  Brain,
+  ChevronDown
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Question, useExam } from "@/hooks/contexts/ExamContext";
 import Link from "next/link";
@@ -40,6 +55,74 @@ export default function AddQuestions() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [componentLoading,setComponentLoading] = useState(false);
+  const [availableSections, setAvailableSections] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchSections();
+  }, []);
+
+  const fetchSections = async () => {
+    try {
+      const resp = await fetch("/api/sections");
+      if (resp.ok) {
+        const data = await resp.json();
+        setAvailableSections(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sections:", err);
+    }
+  };
+  const [configSectionId, setConfigSectionId] = useState<string | null>(null);
+  const [configData, setConfigData] = useState({
+    name: "",
+    identityPrompt: "",
+    transformationPrompt: "",
+    validationRules: ""
+  });
+
+  const openConfig = (sectionId: string) => {
+    const sec = availableSections.find(s => s.id === sectionId);
+    if (sec) {
+      let rules = sec.validationRules || "{}";
+      try {
+        // Handle double-stringification if it exists
+        let parsed = JSON.parse(rules);
+        if (typeof parsed === "string") parsed = JSON.parse(parsed);
+        rules = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        console.warn("Could not parse validation rules as JSON", e);
+      }
+
+      setConfigSectionId(sec.id);
+      setConfigData({
+        name: sec.name,
+        identityPrompt: sec.identityPrompt,
+        transformationPrompt: sec.transformationPrompt,
+        validationRules: rules
+      });
+    }
+  };
+
+  const handleUpdateSection = async () => {
+    const toastId = toast.loading("Updating intelligence...");
+    try {
+      const resp = await fetch("/api/sections", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: configSectionId,
+          ...configData
+        }),
+      });
+      if (resp.ok) {
+        toast.success("Intelligence updated", { id: toastId });
+        fetchSections();
+        setConfigSectionId(null);
+      }
+    } catch (err) {
+      toast.error("Update failed", { id: toastId });
+    }
+  };
 
   useEffect(() => {
     if (exam && !initialized) {
@@ -70,7 +153,10 @@ export default function AddQuestions() {
   const [aiTopic, setAiTopic] = useState("");
   const [aiCount, setAiCount] = useState("5");
   const [aiDifficulty, setAiDifficulty] = useState("medium");
+  const [aiSection, setAiSection] = useState("Smart Auto-Classify");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [pdfText, setPdfText] = useState("");
+  const [pdfAnalyzing, setPdfAnalyzing] = useState(false);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -101,15 +187,18 @@ export default function AddQuestions() {
     setAiGenerating(true);
     setComponentLoading(true);
     const toastId = toast.loading("AI generating...");
+    const isAuto = aiSection === "Smart Auto-Classify";
+    const section = availableSections.find(s => s.name === aiSection);
+
     try {
-      const response = await fetch("/api/ai/extract-questions", {
+      const response = await fetch("/api/ai/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: `Generate ${aiCount} ${aiDifficulty === 'mixed' ? 'varied' : aiDifficulty} multiple choice questions about: ${aiTopic}.`,
+          topic: aiTopic,
           count: parseInt(aiCount),
           difficulty: aiDifficulty,
-          sections: exam?.sectionsConfig?.map(s => s.name) || ["General"]
+          sectionId: isAuto ? "AUTO" : section?.id
         }),
       });
       const data = await response.json();
@@ -123,8 +212,9 @@ export default function AddQuestions() {
           { text: q.optionA }, { text: q.optionB }, { text: q.optionC }, { text: q.optionD },
         ],
         correctAnswer: String(indexToLetter.indexOf(q.correctAnswer.toUpperCase())),
-        section: q.section || "General",
+        section: q.section || qSection || "General",
         marks: parseInt(qMarks) || 1,
+        solution: q.solution
       }));
       setQuestions((prev) => [...prev, ...generated]);
       toast.success(`Added ${generated.length} questions`, { id: toastId });
@@ -192,8 +282,8 @@ export default function AddQuestions() {
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const toastId = toast.loading("Analyzing...");
+    setPdfAnalyzing(true);
+    const toastId = toast.loading("Analyzing PDF structure...");
     setComponentLoading(true);
     try {
       const formData = new FormData();
@@ -201,16 +291,16 @@ export default function AddQuestions() {
       const parseResp = await fetch("/api/parse-pdf", { method: "POST", body: formData });
       if (!parseResp.ok) throw new Error("Parse failed");
       const { text } = await parseResp.json();
-      const sectionNames = exam?.sectionsConfig?.map(s => s.name) || ["General"];
-
+      setPdfText(text);
+      
       const extractResp = await fetch("/api/ai/extract-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           text,
           count: parseInt(aiCount),
-          sections: sectionNames,
-          difficulty: aiDifficulty
+          difficulty: aiDifficulty,
+          mode: "extract"
         }),
       });
       if (!extractResp.ok) throw new Error("Extraction failed");
@@ -223,15 +313,62 @@ export default function AddQuestions() {
         correctAnswer: String(indexToLetter.indexOf(q.correctAnswer.toUpperCase())),
         section: q.section || "General",
         marks: parseInt(qMarks) || 1,
+        solution: q.solution
       }));
       setQuestions((prev) => [...prev, ...newQuestions]);
       toast.success(`Extracted ${newQuestions.length} questions`, { id: toastId });
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
     } finally {
-      setUploading(false);
+      setPdfAnalyzing(false);
       setComponentLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handlePdfGenerate = async (useArchitecture: boolean = false) => {
+    if (!pdfText) {
+      toast.error("Please upload a PDF first");
+      return;
+    }
+    setAiGenerating(true);
+    setComponentLoading(true);
+    const targetCount = useArchitecture 
+      ? localSectionsConfig.reduce((sum, s) => sum + (s.pickCount || 0), 0)
+      : parseInt(aiCount);
+
+    const toastId = toast.loading(useArchitecture ? "Filling all architecture sections..." : "Synthesizing extra questions from PDF...");
+    try {
+      const resp = await fetch("/api/ai/extract-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          text: pdfText,
+          count: targetCount,
+          difficulty: aiDifficulty,
+          mode: "generate",
+          blueprint: useArchitecture ? localSectionsConfig : undefined
+        }),
+      });
+      if (!resp.ok) throw new Error("Generation failed");
+      const { questions: generatedQuestions } = await resp.json();
+      const newQuestions = generatedQuestions.map((q: any, index: number) => ({
+        id: `pdf-gen-${Date.now()}-${index}`,
+        type: "mcq",
+        question: q.question,
+        options: [{ text: q.optionA }, { text: q.optionB }, { text: q.optionC }, { text: q.optionD }],
+        correctAnswer: String(indexToLetter.indexOf(q.correctAnswer.toUpperCase())),
+        section: q.section || "General",
+        marks: parseInt(qMarks) || 1,
+        solution: q.solution
+      }));
+      setQuestions((prev) => [...prev, ...newQuestions]);
+      toast.success(useArchitecture ? `Architecture filled with ${newQuestions.length} questions` : `Generated ${newQuestions.length} unique questions`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setAiGenerating(false);
+      setComponentLoading(false);
     }
   };
 
@@ -264,6 +401,7 @@ export default function AddQuestions() {
 
   const currentSections = Array.from(new Set([
     "General", 
+    ...availableSections.map(s => s.name),
     ...(Array.isArray(exam.sectionsConfig) ? exam.sectionsConfig.map(s => s.name) : []),
     ...questions.map(q => q.section).filter(Boolean) as string[]
   ]));
@@ -329,32 +467,51 @@ export default function AddQuestions() {
                       </Button>
                    </div>
 
-                   <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                       {localSectionsConfig.length === 0 ? (
                         <p className="text-[10px] text-slate-400 italic text-center py-4 border-2 border-dashed rounded-lg">No automated section rules defined.</p>
                       ) : localSectionsConfig.map((sec, idx) => (
                         <div key={idx} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
-                          <Input 
-                            value={sec.name}
-                            onChange={(e) => {
-                              const next = [...localSectionsConfig];
-                              next[idx].name = e.target.value;
-                              setLocalSectionsConfig(next);
-                            }}
-                            placeholder="Section Name"
-                            className="h-8 bg-white text-[10px] font-bold rounded-lg"
-                          />
-                          <Input 
-                            type="number"
-                            value={sec.pickCount}
-                            onChange={(e) => {
-                              const next = [...localSectionsConfig];
-                              next[idx].pickCount = parseInt(e.target.value) || 0;
-                              setLocalSectionsConfig(next);
-                            }}
-                            placeholder="Pick"
-                            className="w-fit text-center text-[10px] font-bold bg-white rounded-lg"
-                          />
+                          <div className="flex-1 flex items-center gap-1">
+                            <select 
+                              value={sec.name}
+                              onChange={(e) => {
+                                const next = [...localSectionsConfig];
+                                next[idx].name = e.target.value;
+                                setLocalSectionsConfig(next);
+                              }}
+                              className="h-8 flex-1 bg-white text-[10px] font-bold rounded-lg border px-2 outline-none"
+                            >
+                              <option value="">Select Section</option>
+                              {currentSections.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            {sec.name && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => {
+                                  const found = availableSections.find(s => s.name === sec.name);
+                                  if (found) openConfig(found.id);
+                                }}
+                                className="h-8 w-8 text-slate-400 hover:text-emerald-500"
+                              >
+                                <Settings2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 bg-white border rounded-lg px-2 h-8 w-fit">
+                            <Label className="text-[8px] font-black text-slate-400 uppercase">Qty</Label>
+                            <Input 
+                              type="number"
+                              value={sec.pickCount}
+                              onChange={(e) => {
+                                const next = [...localSectionsConfig];
+                                next[idx].pickCount = parseInt(e.target.value) || 0;
+                                setLocalSectionsConfig(next);
+                              }}
+                              className=" border-none text-center text-[10px] font-bold h-7 focus-visible:ring-0"
+                            />
+                          </div>
                           <button 
                             onClick={() => setLocalSectionsConfig(localSectionsConfig.filter((_, i) => i !== idx))}
                             className="p-2 text-slate-300 hover:text-red-500 transition-colors"
@@ -424,7 +581,44 @@ export default function AddQuestions() {
                 </div>
 
                 {qSection === "NEW" && (
-                  <Input placeholder="Section name..." className="h-10 border-emerald-200 bg-emerald-50/30 text-emerald-600 font-bold" autoFocus onBlur={(e) => setQSection(e.target.value.trim() || "General")} />
+                  <Input 
+                    placeholder="Section name..." 
+                    className="h-10 border-emerald-200 bg-emerald-50/30 text-emerald-600 font-bold" 
+                    autoFocus 
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        const name = (e.currentTarget as HTMLInputElement).value.trim();
+                        if (!name) return;
+                        
+                        setComponentLoading(true);
+                        try {
+                          const resp = await fetch("/api/sections", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              name,
+                              identityPrompt: `You are an expert in ${name}.`,
+                              transformationPrompt: `Focus on ${name} concepts.`,
+                              description: `Custom section for ${name}`
+                            })
+                          });
+                          if (resp.ok) {
+                            const newSec = await resp.json();
+                            setAvailableSections(prev => [...prev, newSec]);
+                            setQSection(name);
+                            toast.success(`Created section: ${name}`);
+                          }
+                        } catch (err) {
+                          toast.error("Failed to create section");
+                        } finally {
+                          setComponentLoading(false);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) setQSection("General");
+                    }} 
+                  />
                 )}
 
                 <div className="space-y-2">
@@ -527,46 +721,206 @@ export default function AddQuestions() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-emerald-600 p-6 rounded-xl text-white shadow-md relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-12 h-12" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* AI Generator - Premium Glassmorphism */}
+              <div className="bg-gradient-to-br from-emerald-600 to-emerald-600 p-5 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group border border-white/10">
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-125 group-hover:rotate-12 transition-all duration-700">
+                  <Sparkles className="w-16 h-16" />
                 </div>
-                <h3 className="font-bold flex items-center gap-2 mb-4">
-                  <Sparkles className="w-4 h-4" /> AI Generator
-                </h3>
-                <div className="space-y-3">
-                  <Input placeholder="Topic..." value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="h-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm font-medium" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[8px] uppercase tracking-widest opacity-60">Count</Label>
-                      <Input type="number" value={aiCount} onChange={(e) => setAiCount(e.target.value)} className="h-8 bg-white/10 border-white/20 text-center text-xs" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2.5 opacity-80">
+                      <div className="p-1.5 rounded-lg">
+                        <Sparkles className="w-4.5 h-4.5" />
+                      </div>
+                      AI Generator
+                    </h3>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className={`w-1 h-1 rounded-full bg-white/30 ${aiGenerating ? "animate-bounce" : ""}`} style={{ animationDelay: `${i * 0.1}s` }} />
+                      ))}
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[8px] uppercase tracking-widest opacity-60">Level</Label>
-                      <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} className="h-8 w-full bg-white/10 border-white/20 rounded-md text-[10px] font-bold px-2 outline-none">
-                        <option value="easy" className="bg-emerald-600">Easy</option><option value="medium" className="bg-emerald-600">Medium</option><option value="hard" className="bg-emerald-600">Hard</option><option value="mixed" className="bg-emerald-600 ">Mixed</option>
-                      </select>
-                    </div>    
                   </div>
-                  <Button className="w-full h-9 bg-white text-emerald-600 font-bold text-xs uppercase hover:bg-slate-100" onClick={handleAiGenerate} disabled={aiGenerating}>
-                    {aiGenerating ? "Generating..." : "Generate AI Questions"}
-                  </Button>
-                </div>        
+
+                  <div className="space-y-2">
+                    <div className="relative group/input">
+                      <Input 
+                        placeholder="Core Intelligence Topic..." 
+                        value={aiTopic} 
+                        onChange={(e) => setAiTopic(e.target.value)} 
+                        className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/30 text-sm font-bold pl-4 rounded-2xl focus:bg-white/20 transition-all border-none ring-1 ring-white/20 focus:ring-white/40 shadow-inner" 
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 group-hover/input:opacity-50 transition-opacity">
+                        <Brain className="w-4 h-4" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                          <Label className="text-[9px] font-black uppercase tracking-widest opacity-70">Context</Label>
+                          {aiSection !== "Smart Auto-Classify" && (
+                            <button 
+                              onClick={() => {
+                                const found = availableSections.find(s => s.name === aiSection);
+                                if (found) openConfig(found.id);
+                              }}
+                              className="text-white/40 hover:text-white transition-colors"
+                            >
+                              <Settings2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <select 
+                            value={aiSection} 
+                            onChange={(e) => setAiSection(e.target.value)} 
+                            className="h-10 w-full bg-white/10 border-white/20 rounded-xl text-[10px] font-black px-4 outline-none text-white appearance-none cursor-pointer hover:bg-white/20 transition-all ring-1 ring-white/10 border-none"
+                          >
+                            <option value="Smart Auto-Classify" className="bg-emerald-800 text-white">Smart Auto-Classify</option>
+                             {currentSections.map(s => <option key={s} value={s} className="bg-emerald-800 text-white">{s}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-40 pointer-events-none" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-[9px] font-black uppercase tracking-widest opacity-70 px-1">Complexity</Label>
+                        <div className="relative">
+                          <select 
+                            value={aiDifficulty} 
+                            onChange={(e) => setAiDifficulty(e.target.value)} 
+                            className="h-10 w-full bg-white/10 border-white/20 rounded-xl text-[10px] font-black px-4 outline-none text-white appearance-none cursor-pointer hover:bg-white/20 transition-all ring-1 ring-white/10 border-none"
+                          >
+                            <option value="easy" className="bg-emerald-800">Easy</option>
+                            <option value="medium" className="bg-emerald-800">Medium</option>
+                            <option value="hard" className="bg-emerald-800">Hard</option>
+                            <option value="mixed" className="bg-emerald-800">Mixed</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 opacity-40 pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start w-full flex-col gap-4 pt-2">
+                      <div className="w-full space-y-2">
+                        <Label className="text-[9px] font-black uppercase tracking-widest opacity-70 px-1">Quantity</Label>
+                        <Input 
+                          type="number" 
+                          value={aiCount} 
+                          onChange={(e) => setAiCount(e.target.value)} 
+                          className="h-10 bg-white/10 border-none ring-1 ring-white/10 text-center text-xs font-black text-white rounded-xl focus:bg-white/20 transition-all" 
+                        />
+                      </div>
+                      <Button 
+                        className="py-5 flex-1 h-12 w-full bg-white text-emerald-700 font-black text-[11px] uppercase tracking-widest hover:bg-teal-50 border-none shadow-[0_10px_30px_rgba(0,0,0,0.1)] transform active:scale-95 transition-all rounded-2xl relative overflow-hidden group/btn" 
+                        onClick={handleAiGenerate} 
+                        disabled={aiGenerating}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                          {aiGenerating ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-emerald-700/20 border-t-emerald-700 rounded-full animate-spin" />
+                              Synthesizing...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3.5 h-3.5 fill-current" />
+                              Ignite AI Generation
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <div className="bg-white dark:bg-slate-900 border p-6 rounded-xl shadow-sm space-y-4">
-                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-slate-400" /> RAG Agent
-                </h3>
-                <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-800/20 hover:border-emerald-300 transition-colors cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
-                   <Upload className="w-6 h-6 text-slate-300 mb-2 group-hover:text-emerald-500" />
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                     {uploading ? "Parsing..." : "Drop PDF Source"}
-                   </span>
-                   <input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={handlePdfUpload} />
+              {/* RAG Agent - Minimal Slate Premium */}
+              <div className="bg-white dark:bg-slate-900 border-none shadow-[0_15px_50px_rgba(0,0,0,0.05)] p-8 rounded-[2rem] flex flex-col justify-between group/rag relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-slate-50 dark:bg-slate-800/50 rounded-full blur-3xl group-hover/rag:bg-emerald-50 dark:group-hover/rag:bg-emerald-900/10 transition-all duration-700" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200 flex items-center gap-2.5">
+                      <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-400 group-hover/rag:text-emerald-500 transition-colors">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      Knowledge Vault
+                    </h3>
+                  </div>
+
+                  <div 
+                    className="border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center bg-slate-50/30 dark:bg-slate-800/10 hover:border-emerald-200 dark:hover:border-emerald-800 hover:bg-emerald-50/20 transition-all cursor-pointer group/upload min-h-[140px]" 
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm mb-4 transform group-hover/upload:-translate-y-1 transition-transform">
+                      <Upload className="w-6 h-6 text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center leading-loose">
+                      {pdfAnalyzing ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-slate-200 border-t-emerald-500 rounded-full animate-spin" />
+                          Extracting Neural Patterns...
+                        </span>
+                      ) : (
+                        <>Inhale PDF Source<br/><span className="text-[8px] opacity-40 font-bold lowercase italic tracking-normal">(auto-classification active)</span></>
+                      )}
+                    </span>
+                    <input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={handlePdfUpload} />
+                  </div>
+
+                  {pdfText && (
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                      <div className="grid grid-cols-1 gap-2 mt-4">
+                        <Button 
+                          variant="outline" 
+                          className="h-11 border-emerald-500 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-[0.15em] rounded-xl hover:bg-emerald-500 border-none transition-all shadow-md group/gen"
+                          onClick={() => handlePdfGenerate(true)}
+                          disabled={aiGenerating}
+                        >
+                          {aiGenerating ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                              Filling Architecture...
+                            </div>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 fill-current" />
+                              Smart Fill Architecture ({localSectionsConfig.reduce((s, c) => s + (c.pickCount || 0), 0)} Qs)
+                            </span>
+                          )}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="h-11 border-emerald-100 bg-emerald-50 content-center text-emerald-700 font-black text-[10px] uppercase tracking-[0.15em] rounded-xl hover:bg-emerald-100 transition-all group/gen"
+                          onClick={() => handlePdfGenerate(false)}
+                          disabled={aiGenerating}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Zap className="w-3.5 h-3.5" />
+                            Mixed Extra Generation
+                          </span>
+                        </Button>
+                      </div>
+                      <p className="text-[8px] text-center text-slate-400 font-bold mt-2 uppercase tracking-widest opacity-60 italic">
+                        Reference context loaded: {pdfText.length} characters
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[9px] text-slate-400 text-center font-medium italic opacity-60">AI will automatically categorize extracted questions into sections.</p>
+
+                <div className="mt-6 flex items-center gap-3 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-100/50 dark:border-emerald-900/30">
+                  <div className="p-1.5 bg-emerald-500 rounded-lg text-white">
+                    <ShieldCheck className="w-3 h-3" />
+                  </div>
+                  <p className="text-[9px] text-emerald-800/60 dark:text-emerald-500/60 font-black uppercase tracking-widest leading-relaxed">
+                    Identity-Preserving RAG Logic Active
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -659,6 +1013,71 @@ export default function AddQuestions() {
           </div>
         </div>
       </main>
+      <Dialog open={!!configSectionId} onOpenChange={(open) => !open && setConfigSectionId(null)}>
+        <DialogContent className="max-w-2xl bg-white rounded-3xl p-8 border-none shadow-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Settings2 className="w-6 h-6" />
+              </div>
+              Intelligent Persona Config
+            </DialogTitle>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Configure AI Identity for {configData.name}</p>
+          </DialogHeader>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Prompt</Label>
+                </div>
+                <Textarea 
+                  value={configData.identityPrompt} 
+                  onChange={(e) => setConfigData({...configData, identityPrompt: e.target.value})}
+                  className="h-32 text-xs pt-3 leading-relaxed border-slate-100 bg-slate-50/50"
+                  placeholder="You are an expert..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validation Rules (JSON)</Label>
+                </div>
+                <Textarea 
+                  value={configData.validationRules} 
+                  onChange={(e) => setConfigData({...configData, validationRules: e.target.value})}
+                  className="h-24 font-mono text-[10px] pt-3 bg-slate-50/50 border-slate-100"
+                  placeholder='{"rule": true}'
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Workflow className="w-3.5 h-3.5 text-purple-500" />
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transformation Logic</Label>
+                </div>
+                <Textarea 
+                  value={configData.transformationPrompt} 
+                  onChange={(e) => setConfigData({...configData, transformationPrompt: e.target.value})}
+                  className="h-64 text-xs pt-3 leading-relaxed border-slate-100 bg-slate-50/50"
+                  placeholder="Convert topic into..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-8 flex gap-3">
+             <Button variant="ghost" onClick={() => setConfigSectionId(null)} className="font-bold text-slate-400">Cancel</Button>
+             <Button onClick={handleUpdateSection} className="bg-slate-900 hover:bg-black text-white px-8 font-black uppercase tracking-widest h-12 rounded-xl shadow-xl transform active:scale-95 transition-all">
+                Save Identity
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

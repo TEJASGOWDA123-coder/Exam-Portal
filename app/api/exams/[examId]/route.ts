@@ -6,13 +6,13 @@ import { auth } from "@/auth";
 
 export async function GET(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ examId: string }> }
 ) {
-    const { id } = await params;
+    const { examId } = await params;
 
     try {
         const exam = await db.query.exams.findFirst({
-            where: eq(exams.id, id),
+            where: eq(exams.id, examId),
             with: {
                 questions: true,
             },
@@ -39,7 +39,7 @@ export async function GET(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ examId: string }> }
 ) {
     const session = await auth();
     const role = (session?.user as any)?.role;
@@ -48,16 +48,16 @@ export async function DELETE(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { examId } = await params;
 
     try {
         // Delete associated data first
-        await db.delete(questions).where(eq(questions.examId, id));
-        await db.delete(submissions).where(eq(submissions.examId, id));
-        await db.delete(students).where(eq(students.examId, id));
+        await db.delete(questions).where(eq(questions.examId, examId));
+        await db.delete(submissions).where(eq(submissions.examId, examId));
+        await db.delete(students).where(eq(students.examId, examId));
 
         // Delete exam
-        const result = await db.delete(exams).where(eq(exams.id, id));
+        const result = await db.delete(exams).where(eq(exams.id, examId));
 
         return NextResponse.json({ message: "Exam and all associated data deleted successfully" });
     } catch (error) {

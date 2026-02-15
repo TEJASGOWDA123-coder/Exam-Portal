@@ -4,6 +4,7 @@ import { exams, questions } from "@/lib/db/schema";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -24,54 +25,37 @@ export async function GET() {
                 const end = new Date(exam.endTime);
 
                 let status = exam.status;
-                if (now < start) {
-                    status = "upcoming";
-                } else if (now >= start && now <= end) {
-                    status = "active";
-                } else {
-                    status = "completed";
-                }
+                if (now < start) status = "upcoming";
+                else if (now >= start && now <= end) status = "active";
+                else status = "completed";
 
-                let parsedSectionsConfig = [];
-                if (typeof exam.sectionsConfig === "string") {
-                    try {
-                        parsedSectionsConfig = JSON.parse(exam.sectionsConfig);
-                    } catch (e) {
-                        console.error(`Error parsing sectionsConfig for exam ${exam.id}:`, e);
-                        parsedSectionsConfig = [];
+                const parseJson = (val: any) => {
+                    if (typeof val === "string") {
+                        try { return JSON.parse(val); } 
+                        catch (e) { return []; }
                     }
-                } else if (exam.sectionsConfig) {
-                    parsedSectionsConfig = exam.sectionsConfig;
-                }
+                    return val || [];
+                };
 
                 return {
                     ...exam,
                     status,
-                    sectionsConfig: parsedSectionsConfig,
-                    questions: examQuestions.map(q => {
-                        let parsedOptions = [];
-                        if (typeof q.options === "string") {
-                            try {
-                                parsedOptions = JSON.parse(q.options);
-                            } catch (e) {
-                                console.error(`Error parsing options for question ${q.id}:`, e);
-                                parsedOptions = [];
-                            }
-                        } else if (q.options) {
-                            parsedOptions = q.options;
-                        }
-
-                        return {
-                            id: q.id,
-                            type: q.type,
-                            question: q.question,
-                            questionImage: q.questionImage,
-                            options: parsedOptions,
-                            correctAnswer: q.correctAnswer,
-                            section: q.section,
-                            marks: q.marks
-                        };
-                    }),
+                    sectionsConfig: parseJson(exam.sectionsConfig),
+                    blueprint: parseJson(exam.blueprint),
+                    questions: examQuestions.map(q => ({
+                        id: q.id,
+                        type: q.type,
+                        question: q.question,
+                        questionImage: q.questionImage,
+                        options: parseJson(q.options),
+                        correctAnswer: q.correctAnswer,
+                        section: q.section,
+                        sectionId: q.sectionId,
+                        marks: q.marks,
+                        requiresJustification: q.requiresJustification,
+                        solution: q.solution,
+                        source: q.source
+                    })),
                 };
             })
         );
@@ -91,39 +75,39 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, questions: examQuestions } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, requireSeb, questions: examQuestions, blueprint } = data;
 
         await db.transaction(async (tx) => {
             const existingExam = await tx.query.exams.findFirst({
                 where: eq(exams.id, id),
             });
 
+            // Auto-generate sebKey if required and not present
+            let sebKey = existingExam?.sebKey;
+            if (requireSeb && !sebKey) {
+                sebKey = crypto.randomBytes(32).toString("hex");
+            }
+
+            const examValues = {
+                title,
+                duration,
+                totalMarks,
+                startTime,
+                endTime,
+                status,
+                proctoringEnabled: proctoringEnabled ? 1 : 0,
+                showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
+                requireSeb: requireSeb ? 1 : 0,
+                sebKey: requireSeb ? sebKey : null,
+                sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
+                blueprint: blueprint ? JSON.stringify(blueprint) : null
+            };
+
             if (existingExam) {
-                await tx.update(exams)
-                    .set({
-                        title,
-                        duration,
-                        totalMarks,
-                        startTime,
-                        endTime,
-                        status,
-                        proctoringEnabled: proctoringEnabled ? 1 : 0,
-                        sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null
-                    })
-                    .where(eq(exams.id, id));
+                await tx.update(exams).set(examValues).where(eq(exams.id, id));
                 await tx.delete(questions).where(eq(questions.examId, id));
             } else {
-                await tx.insert(exams).values({
-                    id,
-                    title,
-                    duration,
-                    totalMarks,
-                    startTime,
-                    endTime,
-                    status,
-                    proctoringEnabled: proctoringEnabled ? 1 : 0,
-                    sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null
-                });
+                await tx.insert(exams).values({ id, ...examValues });
             }
 
             if (examQuestions && examQuestions.length > 0) {
@@ -137,7 +121,11 @@ export async function POST(req: Request) {
                         options: q.options ? JSON.stringify(q.options) : null,
                         correctAnswer: q.correctAnswer,
                         section: q.section || "General",
+                        sectionId: q.sectionId,
                         marks: q.marks || 1,
+                        requiresJustification: q.requiresJustification || false,
+                        solution: q.solution,
+                        source: q.source || "generated"
                     });
                 }
             }

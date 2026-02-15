@@ -101,7 +101,9 @@ export default function ViewResults() {
       let sectionData: Record<string, any> = {};
       try {
         const scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores;
-        submissionSections.forEach(s => {
+        // Use sections from exam config if available, otherwise fallback to submission sections
+        const sectionsToUse = currentExam?.sectionsConfig?.map(s => s.name) || submissionSections;
+        sectionsToUse.forEach(s => {
           sectionData[`Section: ${s}`] = scores?.[s] || 0;
         });
       } catch {}
@@ -113,6 +115,7 @@ export default function ViewResults() {
         "Class": r.class,
         "Section": r.section,
         "Total Score": r.score,
+        "Max Marks": currentExam?.totalMarks || 0,
         ...sectionData,
         "Violations": r.violations,
         "Submitted At": format(new Date(r.submittedAt), "yyyy-MM-dd HH:mm:ss")
@@ -273,10 +276,11 @@ export default function ViewResults() {
                                  )}
                               </div>
                               {/* Section Breakdown Mini Pills */}
-                              <div className="flex flex-wrap gap-2">
+                              <div className="grid grid-cols-2 gap-2 mt-2">
                                  {Object.entries(scores || {}).map(([s, val]) => (
-                                    <div key={s} className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest dark:bg-slate-800 dark:border-slate-700">
-                                       {s}: <span className="text-emerald-500">{val as any}</span>
+                                    <div key={s} className="flex justify-between items-center px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest dark:bg-slate-800 dark:border-slate-700">
+                                       <span>{s}:</span>
+                                       <span className="text-emerald-500 ml-2">{val as any} / {currentExam?.sectionsConfig?.find(sc => sc.name === s)?.pickCount || "?"}</span>
                                     </div>
                                  ))}
                               </div>

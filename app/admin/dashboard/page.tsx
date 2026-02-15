@@ -74,6 +74,12 @@ export default function Dashboard() {
                 </Link>
               </Button>
             )}
+            <Button variant="outline" asChild className="h-14 px-6 rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-emerald-950/40 font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                <Link href="/admin/sections">
+                  <LayoutDashboard className="mr-3 h-5 w-5" />
+                  Templates
+                </Link>
+            </Button>
             <Button asChild className="h-14 w-14 rounded-full bg-emerald-500 p-0 flex items-center justify-center shadow-[0_10px_25px_rgba(16,185,129,0.3)] hover:scale-110 active:scale-95 transition-all">
               <Link href="/admin/create-exam">
                 <Plus className="h-6 w-6 text-white" />

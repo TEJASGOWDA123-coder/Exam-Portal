@@ -91,9 +91,6 @@ export default function AdminLogin() {
               Sign In
             </Button>
           </form>
-          <p className="text-xs text-muted-foreground text-center mt-6">
-            Demo: admin@cdc.com / admin123
-          </p>
         </div>
       </div>
     </div>

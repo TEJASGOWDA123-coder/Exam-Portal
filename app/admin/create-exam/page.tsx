@@ -16,7 +16,11 @@ import {
   ChevronRight,
   Sparkles,
   Clock,
-  ShieldCheck 
+  ShieldCheck,
+  BarChart2,
+  Lock,
+  Copy,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,11 +31,14 @@ export default function CreateExam() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [proctoringEnabled, setProctoringEnabled] = useState(false);
+  const [showResults, setShowResults] = useState(true);
+  const [requireSeb, setRequireSeb] = useState(false);
   const { addExam } = useExam();
   const router = useRouter();
   const { data: session } = useSession();
 
   // Auto-calculate end time based on start time and duration
+  // ... (keeping useEffect)
   useEffect(() => {
     if (startTime && duration) {
       const start = new Date(startTime);
@@ -56,7 +63,7 @@ export default function CreateExam() {
       return;
     }
     const id = `exam-${Date.now()}`;
-    const exam: Exam = {
+     const exam: Exam = {
       id,
       title: title.trim(),
       duration: parseInt(duration),
@@ -65,6 +72,8 @@ export default function CreateExam() {
       endTime,
       status: "upcoming",
       proctoringEnabled,
+      showResults,
+      requireSeb,
       questions: [],
     };
     const success = await addExam(exam);
@@ -199,6 +208,45 @@ export default function CreateExam() {
                     checked={proctoringEnabled}
                     onCheckedChange={setProctoringEnabled}
                     className="scale-150 data-[state=checked]:bg-emerald-500 transition-all"
+                  />
+               </div>
+
+               <div className="flex items-center justify-between p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-blue-500/30">
+                  <div className="space-y-3 relative z-10">
+                     <div className="flex items-center gap-4 mb-2">
+                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                           <BarChart2 className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Display Results</h4>
+                     </div>
+                     <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
+                        Allow students to see their score and section breakdown immediately after submission.
+                     </p>
+                  </div>
+                  <Switch
+                    checked={showResults}
+                    onCheckedChange={setShowResults}
+                    className="scale-150 data-[state=checked]:bg-blue-500 transition-all"
+                  />
+               </div>
+
+               {/* Safe Exam Browser Enforcement */}
+               <div className="flex items-center justify-between p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-blue-500/30">
+                  <div className="space-y-3 relative z-10">
+                     <div className="flex items-center gap-4 mb-2">
+                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                           <Lock className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Require SEB</h4>
+                     </div>
+                     <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
+                        Enforce lockdown mode. Students must use Safe Exam Browser to access this exam.
+                     </p>
+                  </div>
+                  <Switch
+                    checked={requireSeb}
+                    onCheckedChange={setRequireSeb}
+                    className="scale-150 data-[state=checked]:bg-blue-600 transition-all"
                   />
                </div>
 

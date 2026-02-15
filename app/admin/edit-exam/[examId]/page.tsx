@@ -17,7 +17,11 @@ import {
   Trash2, 
   Sparkles, 
   ShieldCheck,
-  Zap
+  Zap,
+  BarChart2,
+  Lock,
+  Copy,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,6 +36,10 @@ export default function EditExam() {
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [proctoringEnabled, setProctoringEnabled] = useState(false);
+    const [showResults, setShowResults] = useState(true);
+    const [requireSeb, setRequireSeb] = useState(false);
+    const [sebKey, setSebKey] = useState("");
+    const [copiedUrl, setCopiedUrl] = useState(false);
     const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -45,6 +53,9 @@ export default function EditExam() {
             setStartTime(exam.startTime);
             setEndTime(exam.endTime);
             setProctoringEnabled(!!exam.proctoringEnabled);
+            setShowResults(exam.showResults !== undefined ? !!exam.showResults : true);
+            setRequireSeb(!!exam.requireSeb);
+            setSebKey(exam.sebKey || "");
             setSectionsConfig(exam.sectionsConfig || []);
             setLoading(false);
         } else {
@@ -59,6 +70,9 @@ export default function EditExam() {
                         setStartTime(data.startTime);
                         setEndTime(data.endTime);
                         setProctoringEnabled(!!data.proctoringEnabled);
+                        setShowResults(data.showResults !== undefined ? !!data.showResults : true);
+                        setRequireSeb(!!data.requireSeb);
+                        setSebKey(data.sebKey || "");
                         setSectionsConfig(data.sectionsConfig || []);
                         setLoading(false);
                     } else {
@@ -110,6 +124,9 @@ export default function EditExam() {
             startTime,
             endTime,
             proctoringEnabled,
+            showResults,
+            requireSeb,
+            sebKey: requireSeb ? (sebKey || undefined) : undefined,
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
             status: exam?.status || "upcoming",
             questions: exam?.questions || [],
@@ -319,6 +336,80 @@ export default function EditExam() {
                                     className="scale-150 data-[state=checked]:bg-emerald-500 transition-all"
                                 />
                             </div>
+
+                            <div className="flex items-center justify-between p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-emerald-500/30">
+                                <div className="space-y-3 relative z-10">
+                                    <div className="flex items-center gap-4 mb-2">
+                                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                            <BarChart2 className="h-6 w-6 text-blue-500" />
+                                        </div>
+                                        <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Display Results</h4>
+                                    </div>
+                                    <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
+                                        Allow students to see their score and section breakdown immediately after submission.
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={showResults}
+                                    onCheckedChange={setShowResults}
+                                    className="scale-150 data-[state=checked]:bg-blue-500 transition-all"
+                                />
+                            </div>
+
+                             {/* Safe Exam Browser Enforcement */}
+                             <div className="flex flex-col gap-6 p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-blue-500/30">
+                                 <div className="flex items-center justify-between">
+                                     <div className="space-y-3 relative z-10">
+                                         <div className="flex items-center gap-4 mb-2">
+                                             <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                                 <Lock className="h-6 w-6 text-blue-500" />
+                                             </div>
+                                             <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Require SEB</h4>
+                                         </div>
+                                         <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
+                                             Enforce lockdown mode. Students must use Safe Exam Browser to access this exam.
+                                         </p>
+                                     </div>
+                                     <Switch
+                                         checked={requireSeb}
+                                         onCheckedChange={setRequireSeb}
+                                         className="scale-150 data-[state=checked]:bg-blue-600 transition-all"
+                                     />
+                                 </div>
+ 
+                                 {requireSeb && (
+                                     <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500">
+                                         <div className="p-6 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-500/10 space-y-4">
+                                             <div className="flex items-center justify-between">
+                                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">Public Start URL</Label>
+                                                 <Button 
+                                                     variant="ghost" 
+                                                     size="sm" 
+                                                     type="button"
+                                                     onClick={() => {
+                                                         const url = `${window.location.origin}/start/exam/${examId}`;
+                                                         navigator.clipboard.writeText(url);
+                                                         setCopiedUrl(true);
+                                                         setTimeout(() => setCopiedUrl(false), 2000);
+                                                     }}
+                                                     className="h-8 px-3 rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all"
+                                                 >
+                                                     {copiedUrl ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                                     <span className="ml-2 text-[10px] font-black uppercase tracking-widest">{copiedUrl ? "Copied" : "Copy"}</span>
+                                                 </Button>
+                                             </div>
+                                             <p className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">
+                                                Share this link with students. They will download the .seb file from this page.
+                                             </p>
+                                             <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-blue-100 dark:border-blue-900/20">
+                                                 <code className="text-[11px] font-mono font-bold text-blue-500 break-all">
+                                                     {window.location.origin}/start/exam/{examId}
+                                                 </code>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
                         </div>
                     </TabsContent>
                 </Tabs>
