@@ -32,8 +32,6 @@ export interface Exam {
   status: "active" | "upcoming" | "completed";
   proctoringEnabled?: boolean | number;
   showResults?: boolean | number;
-  requireSeb?: boolean | number;
-  sebKey?: string;
   sectionsConfig?: { name: string; pickCount: number }[];
   questions: Question[];
 }
@@ -162,10 +160,11 @@ export function ExamProvider({ children }: { children: ReactNode }) {
         setExams((prev) => [...prev, exam]);
         return true;
       }
-      return false;
-    } catch (err) {
+      const errorData = await resp.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(errorData.details || errorData.error || "Failed to create exam");
+    } catch (err: any) {
       console.error("Failed to add exam:", err);
-      return false;
+      throw err; // Re-throw so the caller can show the error
     }
   };
 
@@ -177,10 +176,14 @@ export function ExamProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(exam),
       });
-      return resp.ok;
-    } catch (err) {
+      if (resp.ok) {
+        return true;
+      }
+      const errorData = await resp.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(errorData.details || errorData.error || "Failed to update exam");
+    } catch (err: any) {
       console.error("Failed to update exam:", err);
-      return false;
+      throw err; // Re-throw so the caller can show the error
     }
   };
 

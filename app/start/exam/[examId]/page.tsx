@@ -56,9 +56,6 @@ export default function PublicStartPage() {
     );
   }
 
-  const handleStartSEB = () => {
-    window.location.href = `/api/exams/${examId}/seb-config`;
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 selection:bg-emerald-500/30">
@@ -75,12 +72,6 @@ export default function PublicStartPage() {
               <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Secure Protocol v2.0</span>
               </div>
-              {exam.requireSeb && (
-                <div className="px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
-                  <Lock className="h-3 w-3 text-blue-500" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">SEB Enforced</span>
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -125,53 +116,28 @@ export default function PublicStartPage() {
                        <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">02</span>
                        <span>AI Integrity Guard will monitor gaze, audio, and peripheral activity.</span>
                     </li>
-                    <li className="flex gap-4">
-                       <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">03</span>
-                       <span>Exiting the designated browser sandbox will trigger an immediate compliance failure.</span>
-                    </li>
+                     <li className="flex gap-4">
+                        <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">03</span>
+                        <span>Exiting the secure evaluation environment will trigger a compliance review.</span>
+                     </li>
                  </ul>
               </div>
 
               <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-                 {exam.requireSeb ? (
-                    <>
-                       <Button 
-                         onClick={handleStartSEB}
-                         className="h-20 rounded-[2rem] bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-[0_20px_40px_rgba(37,99,235,0.3)] hover:shadow-[0_25px_50px_rgba(37,99,235,0.4)] transition-all active:scale-[0.98] group"
-                       >
-                         <Lock className="mr-4 h-6 w-6 group-hover:rotate-12 transition-transform" />
-                         Start in Safe Exam Browser
-                         <Download className="ml-4 h-5 w-5 opacity-50" />
-                       </Button>
-                       <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Requires SEB 3.0+ Installed. This action will launch the lockdown environment.
-                       </p>
-                    </>
-                 ) : (
-                    <Button 
-                      asChild
-                      className="h-20 rounded-[2rem] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-lg shadow-[0_20px_40px_rgba(34,197,94,0.3)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98]"
-                    >
-                      <a href={`/exam/${examId}/live`}>
-                        Initiate Assessment Session
-                      </a>
-                    </Button>
-                 )}
+                  <Button 
+                    asChild
+                    className="h-20 rounded-[2rem] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-lg shadow-[0_20px_40px_rgba(34,197,94,0.3)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98]"
+                  >
+                    <a href={`/exam/${examId}/live`}>
+                      Initiate Assessment Session
+                    </a>
+                  </Button>
               </div>
            </div>
         </div>
 
         {/* Footer Support */}
-        <div className="flex justify-between items-center px-6">
-           <a 
-             href="https://safeexambrowser.org/download_en.html" 
-             target="_blank" 
-             rel="noreferrer"
-             className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-blue-500 transition-colors flex items-center gap-2"
-           >
-             <Download className="h-3 w-3" />
-             Download SEB Client
-           </a>
+        <div className="flex justify-end items-center px-6 pb-20">
            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
               <ShieldCheck className="h-3 w-3" />
               End-to-End Encrypted Session

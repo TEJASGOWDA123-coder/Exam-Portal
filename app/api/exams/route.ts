@@ -4,7 +4,6 @@ import { exams, questions } from "@/lib/db/schema";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -75,18 +74,14 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, requireSeb, questions: examQuestions, blueprint } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, questions: examQuestions, blueprint } = data;
+
+
 
         await db.transaction(async (tx) => {
             const existingExam = await tx.query.exams.findFirst({
                 where: eq(exams.id, id),
             });
-
-            // Auto-generate sebKey if required and not present
-            let sebKey = existingExam?.sebKey;
-            if (requireSeb && !sebKey) {
-                sebKey = crypto.randomBytes(32).toString("hex");
-            }
 
             const examValues = {
                 title,
@@ -97,8 +92,6 @@ export async function POST(req: Request) {
                 status,
                 proctoringEnabled: proctoringEnabled ? 1 : 0,
                 showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
-                requireSeb: requireSeb ? 1 : 0,
-                sebKey: requireSeb ? sebKey : null,
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
                 blueprint: blueprint ? JSON.stringify(blueprint) : null
             };
@@ -132,8 +125,14 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ success: true, id });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to save exam:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        
+
+        
+        return NextResponse.json({ 
+            error: error?.message || "Internal Server Error",
+            details: error?.message || "Failed to save exam. Please check the console for details."
+        }, { status: 500 });
     }
 }

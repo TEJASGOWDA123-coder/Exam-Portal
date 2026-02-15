@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { relations } from "drizzle-orm";
 
 // Updated users table with roles (superadmin, admin) - students now in separate table
 export const users = sqliteTable("users", {
@@ -52,10 +53,6 @@ export const exams = sqliteTable("exams", {
   status: text("status", { enum: ["active", "upcoming", "completed"] }).notNull().default("upcoming"),
   proctoringEnabled: integer("proctoring_enabled").notNull().default(0), // 0 for disabled, 1 for enabled
   showResults: integer("show_results").notNull().default(1), // 0 for hidden, 1 for visible
-  sebEnabled: integer("seb_enabled").notNull().default(0), // Deprecated
-  sebConfigKey: text("seb_config_key"), // Deprecated
-  requireSeb: integer("require_seb").notNull().default(0), // 0 for disabled, 1 for enabled
-  sebKey: text("seb_key"), // Auto-generated secure random key
   sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number }[]
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
   generatedQuestions: text("generated_questions"), // JSON string for specific student variants
@@ -101,6 +98,43 @@ export const submissions = sqliteTable("submissions", {
     uniqueIndex("exam_usn_unique").on(table.examId, table.usn),
   ];
 });
+
+// Drizzle Relations for relational queries
+
+export const examsRelations = relations(exams, ({ many }) => ({
+  questions: many(questions),
+  submissions: many(submissions),
+  students: many(students),
+}));
+
+export const questionsRelations = relations(questions, ({ one }) => ({
+  exam: one(exams, {
+    fields: [questions.examId],
+    references: [exams.id],
+  }),
+  section: one(sections, {
+    fields: [questions.sectionId],
+    references: [sections.id],
+  }),
+}));
+
+export const submissionsRelations = relations(submissions, ({ one }) => ({
+  exam: one(exams, {
+    fields: [submissions.examId],
+    references: [exams.id],
+  }),
+}));
+
+export const studentsRelations = relations(students, ({ one }) => ({
+  exam: one(exams, {
+    fields: [students.examId],
+    references: [exams.id],
+  }),
+}));
+
+export const sectionsRelations = relations(sections, ({ many }) => ({
+  questions: many(questions),
+}));
 
 // Types for TypeScript
 export type User = typeof users.$inferSelect;

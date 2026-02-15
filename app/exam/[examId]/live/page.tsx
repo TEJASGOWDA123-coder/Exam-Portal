@@ -39,32 +39,7 @@ export default function LiveExamPage() {
   const exam = exams.find((e) => e.id === examId);
 
   const [preCheck, setPreCheck] = useState(true);
-  const [isVerifyingSEB, setIsVerifyingSEB] = useState(false);
 
-  useEffect(() => {
-    const verifySEB = async () => {
-      if (exam?.requireSeb) {
-        setIsVerifyingSEB(true);
-        try {
-          // Internal API call that reads X-SafeExamBrowser headers
-          const resp = await fetch(`/api/exams/${examId}/seb-verify`);
-          if (!resp.ok) {
-            router.push(`/start/exam/${examId}`);
-            return;
-          }
-        } catch (err) {
-          console.error("SEB Verification failed:", err);
-          router.push(`/start/exam/${examId}`);
-        } finally {
-          setIsVerifyingSEB(false);
-        }
-      }
-    };
-    
-    if (exam) {
-      verifySEB();
-    }
-  }, [exam, examId, router]);
 
   const shuffledQuestions = useMemo(() => {
     if (!exam) return [];
@@ -101,10 +76,12 @@ export default function LiveExamPage() {
   const [violations, setViolations] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const startTime = useMemo(() => Date.now(), []);
   
   const submitExam = useCallback(async (isTimeout = false) => {
-    if (submitted || !exam || !student) return;
+    if (submitted || isSubmitting || !exam || !student) return;
+    setIsSubmitting(true);
     setSubmitted(true);
 
     if (isTimeout) {
@@ -182,7 +159,9 @@ export default function LiveExamPage() {
         sectionScores: sectionalResults,
       }),
     );
-    router.push(`/exam/${examId}/result`);
+    
+    // Immediate redirect to avoid proctoring staying active
+    router.replace(`/exam/${examId}/result`);
   }, [
     submitted,
     exam,
@@ -290,23 +269,6 @@ export default function LiveExamPage() {
     return groups;
   }, [shuffledQuestions]);
 
-  if (isVerifyingSEB) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 selection:bg-blue-500/30">
-        <div className="text-center space-y-8 animate-pulse">
-          <div className="h-24 w-24 rounded-[2.5rem] bg-blue-500/10 flex items-center justify-center border border-blue-500/20 mx-auto shadow-2xl shadow-blue-500/20">
-            <Lock className="h-10 w-10 text-blue-500" />
-          </div>
-          <div className="space-y-3">
-            <h2 className="text-3xl font-black text-white tracking-tighter">Verifying Sandbox Integrity</h2>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed">
-               Secure Cryptographic Handshake in Progress...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!exam || shuffledQuestions.length === 0) {
     return (
@@ -442,8 +404,8 @@ export default function LiveExamPage() {
             </div>
 
             {currentQ === shuffledQuestions.length - 1 ? (
-              <Button onClick={() => setShowConfirm(true)} size="lg" className="rounded-xl px-8 font-bold">
-                <Send className="w-4 h-4 mr-2" /> Finish Exam
+              <Button onClick={() => setShowConfirm(true)} size="lg" className="rounded-xl px-8 font-bold" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Finish Exam"}
               </Button>
             ) : (
               <Button onClick={() => setCurrentQ((c) => c + 1)} size="lg" className="rounded-xl px-8 font-bold">
@@ -456,7 +418,7 @@ export default function LiveExamPage() {
         <div className="lg:col-span-4 h-full flex flex-col gap-6">
           {exam.proctoringEnabled && (
             <div className="bg-background rounded-3xl border border-border shadow-card overflow-hidden">
-               <AIProctor onViolation={handleAIViolation} />
+               <AIProctor onViolation={handleAIViolation} isFinished={submitted} />
             </div>
           )}
 
@@ -466,7 +428,7 @@ export default function LiveExamPage() {
             </h4>
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-xl text-[11px] text-muted-foreground">
-                Exiting the SEB sandbox will terminate your evaluation instance immediately.
+                Maintain focus on the exam window. Tab switching is monitored and reported.
               </div>
             </div>
           </div>
@@ -482,8 +444,10 @@ export default function LiveExamPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Review</AlertDialogCancel>
-            <AlertDialogAction onClick={() => submitExam()}>Confirm Submission</AlertDialogAction>
+            <AlertDialogCancel disabled={isSubmitting}>Review</AlertDialogCancel>
+            <AlertDialogAction onClick={() => submitExam()} disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Confirm Submission"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -5,8 +5,9 @@ import { AlertTriangle } from "lucide-react";
 
 interface AIProctorProps {
   onViolation: (reason: string, points: number) => void;
+  isFinished?: boolean;
 }
- function AIProctor ({ onViolation }: AIProctorProps) {
+ function AIProctor ({ onViolation, isFinished }: AIProctorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
@@ -223,13 +224,22 @@ interface AIProctorProps {
     return () => {
       isClosed = true;
       cancelAnimationFrame(animationFrameId);
-      stream?.getTracks().forEach((track) => track.stop());
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
       audioContext?.close();
       if (faceMesh) {
         faceMesh.close().catch(() => {});
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isFinished) {
+      // Trigger cleanup early if finished
+      console.log("AIProctor: Exam finished, cleaning up...");
+    }
+  }, [isFinished]);
 
   return (
     <div className="flex flex-col gap-4 items-center p-4 bg-card border border-border rounded-xl shadow-sm">

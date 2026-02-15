@@ -20,7 +20,8 @@ import {
   BarChart2,
   Lock,
   Copy,
-  Check
+  Check,
+  ClipboardPaste
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,7 +33,6 @@ export default function CreateExam() {
   const [endTime, setEndTime] = useState("");
   const [proctoringEnabled, setProctoringEnabled] = useState(false);
   const [showResults, setShowResults] = useState(true);
-  const [requireSeb, setRequireSeb] = useState(false);
   const { addExam } = useExam();
   const router = useRouter();
   const { data: session } = useSession();
@@ -73,15 +73,16 @@ export default function CreateExam() {
       status: "upcoming",
       proctoringEnabled,
       showResults,
-      requireSeb,
       questions: [],
     };
-    const success = await addExam(exam);
-    if (success) {
-      toast.success("Exam Created! Now add questions.");
-      router.push(`/admin/add-questions/${id}`);
-    } else {
-      toast.error("Failed to create exam");
+    try {
+      const success = await addExam(exam);
+      if (success) {
+        toast.success("Exam Created! Now add questions.");
+        router.push(`/admin/add-questions/${id}`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create exam");
     }
   };
 
@@ -230,26 +231,6 @@ export default function CreateExam() {
                   />
                </div>
 
-               {/* Safe Exam Browser Enforcement */}
-               <div className="flex items-center justify-between p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-blue-500/30">
-                  <div className="space-y-3 relative z-10">
-                     <div className="flex items-center gap-4 mb-2">
-                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                           <Lock className="h-6 w-6 text-blue-500" />
-                        </div>
-                        <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Require SEB</h4>
-                     </div>
-                     <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
-                        Enforce lockdown mode. Students must use Safe Exam Browser to access this exam.
-                     </p>
-                  </div>
-                  <Switch
-                    checked={requireSeb}
-                    onCheckedChange={setRequireSeb}
-                    className="scale-150 data-[state=checked]:bg-blue-600 transition-all"
-                  />
-               </div>
-
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-emerald-950/20 dark:border-emerald-500/10 shadow-sm">
                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Digital Surveillance</h5>
@@ -266,10 +247,10 @@ export default function CreateExam() {
                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Compliance Protocol</h5>
                      <ul className="space-y-5">
                         {["Matrix Escape (3 strikes)", "Browser Sandbox isolation", "Full-session telemetry", "Instant termination"].map((item) => (
-                            <li key={item} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                               <div className="w-2 h-2 rounded-full bg-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.3)]" />
-                               {item}
-                            </li>
+                             <li key={item} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                                <div className="w-2 h-2 rounded-full bg-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.3)]" />
+                                {item}
+                             </li>
                         ))}
                      </ul>
                   </div>
