@@ -1,3 +1,4 @@
+// VERIFIED_FIX_2026-02-15_V1
 import { db } from "@/lib/db";
 import { exams, questions } from "@/lib/db/schema";
 import { auth } from "@/auth";
@@ -31,18 +32,46 @@ export async function GET() {
                     status = "completed";
                 }
 
+                let parsedSectionsConfig = [];
+                if (typeof exam.sectionsConfig === "string") {
+                    try {
+                        parsedSectionsConfig = JSON.parse(exam.sectionsConfig);
+                    } catch (e) {
+                        console.error(`Error parsing sectionsConfig for exam ${exam.id}:`, e);
+                        parsedSectionsConfig = [];
+                    }
+                } else if (exam.sectionsConfig) {
+                    parsedSectionsConfig = exam.sectionsConfig;
+                }
+
                 return {
                     ...exam,
                     status,
-                    sectionsConfig: typeof exam.sectionsConfig === "string" ? JSON.parse(exam.sectionsConfig) : (exam.sectionsConfig || []),
-                    questions: examQuestions.map(q => ({
-                        id: q.id,
-                        type: q.type,
-                        question: q.question,
-                        questionImage: q.questionImage,
-                        options: typeof q.options === "string" ? JSON.parse(q.options) : (q.options || []),
-                        correctAnswer: q.correctAnswer
-                    })),
+                    sectionsConfig: parsedSectionsConfig,
+                    questions: examQuestions.map(q => {
+                        let parsedOptions = [];
+                        if (typeof q.options === "string") {
+                            try {
+                                parsedOptions = JSON.parse(q.options);
+                            } catch (e) {
+                                console.error(`Error parsing options for question ${q.id}:`, e);
+                                parsedOptions = [];
+                            }
+                        } else if (q.options) {
+                            parsedOptions = q.options;
+                        }
+
+                        return {
+                            id: q.id,
+                            type: q.type,
+                            question: q.question,
+                            questionImage: q.questionImage,
+                            options: parsedOptions,
+                            correctAnswer: q.correctAnswer,
+                            section: q.section,
+                            marks: q.marks
+                        };
+                    }),
                 };
             })
         );
@@ -107,6 +136,8 @@ export async function POST(req: Request) {
                         questionImage: q.questionImage,
                         options: q.options ? JSON.stringify(q.options) : null,
                         correctAnswer: q.correctAnswer,
+                        section: q.section || "General",
+                        marks: q.marks || 1,
                     });
                 }
             }

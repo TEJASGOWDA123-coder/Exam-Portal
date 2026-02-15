@@ -133,7 +133,7 @@ export default function EditExam() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-10 px-6 animate-fade-in">
+        <div className="w-full py-10 px-4 animate-fade-in">
             <div className="mb-12">
                 <div className="flex items-center gap-4 mb-6">
                     <Link href="/admin/dashboard" className="p-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200 dark:border-slate-800">
@@ -161,7 +161,7 @@ export default function EditExam() {
                             02. Chronology
                         </TabsTrigger>
                         <TabsTrigger value="sections" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-                            03. Dimensions
+                            03. Sections
                         </TabsTrigger>
                         <TabsTrigger value="proctoring" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
                             04. Integrity
@@ -177,7 +177,7 @@ export default function EditExam() {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Enter Title..."
-                                    className="h-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                                    className="h-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                                 />
                             </div>
                         </div>
@@ -194,20 +194,20 @@ export default function EditExam() {
                                         type="number"
                                         value={duration}
                                         onChange={(e) => setDuration(e.target.value)}
-                                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <Label htmlFor="marks" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Terminal Score</Label>
                                 <div className="relative group">
-                                    <Plus className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                    <Plus className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
                                     <Input
                                         id="marks"
                                         type="number"
                                         value={totalMarks}
                                         onChange={(e) => setTotalMarks(e.target.value)}
-                                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                                     />
                                 </div>
                             </div>
@@ -218,7 +218,7 @@ export default function EditExam() {
                                     type="datetime-local"
                                     value={startTime}
                                     onChange={(e) => setStartTime(e.target.value)}
-                                    className="h-16 rounded-[1.5rem] border-slate-200 font-black text-sm bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                                    className="h-16 rounded-[1.5rem] border-slate-200 font-black text-sm bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                                 />
                             </div>
                             <div className="space-y-4">
@@ -239,7 +239,7 @@ export default function EditExam() {
                             <div className="rounded-[2rem] bg-emerald-500/5 p-8 border border-emerald-500/10 dark:bg-emerald-500/5 dark:border-emerald-500/20 shadow-sm">
                                 <div className="flex items-center gap-4 mb-4 text-emerald-600">
                                     <Sparkles className="h-6 w-6" />
-                                    <h4 className="font-black text-lg tracking-tight uppercase tracking-widest">Dimension Control</h4>
+                                    <h4 className="font-black text-lg tracking-tight uppercase tracking-widest">Section Control</h4>
                                 </div>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-bold italic">
                                     Define the architectural boundaries of your assessment sections.
@@ -248,9 +248,9 @@ export default function EditExam() {
 
                             <div className="space-y-4">
                                 {sectionsConfig.map((sec, idx) => (
-                                    <div key={idx} className="group relative flex flex-col md:flex-row items-end gap-6 p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm transition-all hover:shadow-2xl dark:bg-slate-900/40 dark:border-slate-800">
+                                    <div key={idx} className="group relative flex flex-col md:flex-row items-end gap-6 p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm transition-all hover:shadow-2xl dark:bg-emerald-950/20 dark:border-emerald-500/10">
                                         <div className="flex-1 space-y-3 w-full">
-                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Dimension Identifier</Label>
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Section Name</Label>
                                             <Input 
                                                 value={sec.name} 
                                                 onChange={(e) => {
@@ -292,7 +292,7 @@ export default function EditExam() {
                                     onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10 }])}
                                 >
                                     <Plus className="w-5 h-5 mr-4 group-hover:rotate-90 transition-transform" />
-                                    Extend Matrix Configuration
+                                    Add Section
                                 </Button>
                             </div>
                         </div>
@@ -325,11 +325,11 @@ export default function EditExam() {
 
                 <div className="pt-12 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-end gap-6 pb-20">
                     <Button variant="ghost" type="button" onClick={() => router.back()} className="h-16 px-10 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
-                        Abort
+                        Cancel
                     </Button>
                     <Button type="submit" className="h-16 px-14 rounded-2xl bg-emerald-500 font-black text-slate-950 shadow-[0_10px_30px_rgba(34,197,94,0.3)] hover:bg-emerald-400 hover:shadow-[0_15px_35px_rgba(34,197,94,0.4)] transition-all active:scale-95 w-full md:w-auto">
                         <Save className="mr-3 h-5 w-5" />
-                        Commit Modifications
+                        Submit
                     </Button>
                 </div>
             </form>

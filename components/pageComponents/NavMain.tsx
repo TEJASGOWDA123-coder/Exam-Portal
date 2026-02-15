@@ -40,12 +40,12 @@ export function NavMain({ items }: { items: any }) {
                   
                   ${
                     isActive
-                      ? `font-semibold bg-[#2a44cb] text-white dark:bg-sidebar-accent dark:text-sidebar-accent-foreground hover:bg-[#2a44cb] hover:text-white  ${
+                      ? `font-semibold bg-emerald-500 text-white dark:bg-emerald-600 dark:text-white hover:bg-emerald-600 hover:text-white  ${
                           theme === "light"
-                            ? "hover:hover:bg-[#2a44cb] hover:text-white"
+                            ? "hover:hover:bg-emerald-600 hover:text-white"
                             : ""
                         }  `
-                      : "text-foreground hover:bg-[#2a44cb] hover:text-white dark:hover:bg-sidebar-accent dark:hover:text-sidebar-accent-foreground"
+                      : "text-foreground hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white"
                   }`}
               >
                 <Link

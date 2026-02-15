@@ -18,14 +18,15 @@ import {
   FileText,
   Upload,
   SquarePen,
-  Link as LinkIcon,
   ChevronRight,
   Zap,
-  LayoutGrid
+  LayoutGrid,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { Question, useExam } from "@/hooks/contexts/ExamContext";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const indexToLetter = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -57,12 +58,11 @@ export default function AddQuestions() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [autoDetectSections, setAutoDetectSections] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // AI generation state
   const [aiTopic, setAiTopic] = useState("");
   const [aiCount, setAiCount] = useState("5");
+  const [aiDifficulty, setAiDifficulty] = useState("medium");
   const [aiGenerating, setAiGenerating] = useState(false);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -92,14 +92,15 @@ export default function AddQuestions() {
       return;
     }
     setAiGenerating(true);
-    const toastId = toast.loading("AI is thinking (generating pool)...");
+    const toastId = toast.loading("AI generating...");
     try {
-      const response = await fetch("/api/ai/extract-questions", { // Reuse extraction for topic generation too or create dedicated
+      const response = await fetch("/api/ai/extract-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: `Generate ${aiCount} multiple choice questions about: ${aiTopic}. Ensure high quality.`,
+          text: `Generate ${aiCount} ${aiDifficulty === 'mixed' ? 'varied' : aiDifficulty} multiple choice questions about: ${aiTopic}.`,
           count: parseInt(aiCount),
+          difficulty: aiDifficulty,
           sections: exam?.sectionsConfig?.map(s => s.name) || ["General"]
         }),
       });
@@ -118,9 +119,9 @@ export default function AddQuestions() {
         marks: parseInt(qMarks) || 1,
       }));
       setQuestions((prev) => [...prev, ...generated]);
-      toast.success(`Generated ${generated.length} questions into your pool!`, { id: toastId });
+      toast.success(`Added ${generated.length} questions`, { id: toastId });
     } catch (err: any) {
-      toast.error("Failed to generate questions", { id: toastId });
+      toast.error("Generation failed", { id: toastId });
     } finally {
       setAiGenerating(false);
     }
@@ -128,7 +129,7 @@ export default function AddQuestions() {
 
   const addOrUpdateQuestion = () => {
     if (!questionText.trim()) {
-      toast.error("Please enter question text");
+      toast.error("Question text required");
       return;
     }
     const newQ: Question = {
@@ -148,7 +149,7 @@ export default function AddQuestions() {
       setQuestions((prev) => [...prev, newQ]);
     }
     resetForm();
-    toast.success(editingId ? "Updated" : "Added to Pool");
+    toast.success(editingId ? "Updated" : "Added");
   };
 
   const resetForm = () => {
@@ -165,45 +166,28 @@ export default function AddQuestions() {
   const editQuestion = (id: string) => {
     const q = questions.find((item) => item.id === id);
     if (!q) return;
-    
     setEditingId(q.id);
     setQuestionText(q.question);
     setQuestionImage(q.questionImage || "");
     setQType(q.type);
-    if (q.options) {
-      setOptions(q.options);
-    } else {
-      setOptions([{ text: "" }, { text: "" }, { text: "" }, { text: "" }]);
-    }
+    setOptions(q.options || [{ text: "" }, { text: "" }, { text: "" }, { text: "" }]);
     setCorrectAnswer(q.correctAnswer);
     setQSection(q.section || "General");
     setQMarks(String(q.marks || 1));
-    
-    // Smooth scroll to the editor form
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
-    const toastId = toast.loading("RAG Agent: Analyzing document...");
-
+    const toastId = toast.loading("Analyzing...");
     try {
       const formData = new FormData();
       formData.append("file", file);
-
-      const parseResp = await fetch("/api/parse-pdf", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!parseResp.ok) throw new Error("Failed to parse PDF");
+      const parseResp = await fetch("/api/parse-pdf", { method: "POST", body: formData });
+      if (!parseResp.ok) throw new Error("Parse failed");
       const { text } = await parseResp.json();
-
-      toast.loading("RAG Agent: Categorizing and Framing pool (2x)...", { id: toastId });
-
       const extractResp = await fetch("/api/ai/extract-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -213,26 +197,21 @@ export default function AddQuestions() {
           sections: exam?.sectionsConfig?.map(s => s.name) || ["General"]
         }),
       });
-
-      if (!extractResp.ok) throw new Error("AI extraction failed");
+      if (!extractResp.ok) throw new Error("Extraction failed");
       const { questions: extracted } = await extractResp.json();
-
       const newQuestions = extracted.map((q: any, index: number) => ({
         id: `pdf-${Date.now()}-${index}`,
         type: "mcq",
         question: q.question,
-        options: [
-          { text: q.optionA }, { text: q.optionB }, { text: q.optionC }, { text: q.optionD },
-        ],
+        options: [{ text: q.optionA }, { text: q.optionB }, { text: q.optionC }, { text: q.optionD }],
         correctAnswer: String(indexToLetter.indexOf(q.correctAnswer.toUpperCase())),
         section: q.section || "General",
         marks: parseInt(qMarks) || 1,
       }));
-
       setQuestions((prev) => [...prev, ...newQuestions]);
-      toast.success(`Successfully added ${newQuestions.length} questions to your pool!`, { id: toastId });
+      toast.success(`Extracted ${newQuestions.length} questions`, { id: toastId });
     } catch (err: any) {
-      toast.error(err.message || "Failed to process PDF", { id: toastId });
+      toast.error(err.message, { id: toastId });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -240,13 +219,9 @@ export default function AddQuestions() {
   };
 
   const handleBulkDelete = (section?: string) => {
-    if (confirm(`Are you sure you want to delete ${section ? `all questions in "${section}"` : "ALL questions"}?`)) {
-      if (section) {
-        setQuestions(prev => prev.filter(q => q.section !== section));
-      } else {
-        setQuestions([]);
-      }
-      toast.success("Deleted successfully");
+    if (confirm(`Delete ${section ? section : "all"}?`)) {
+      setQuestions(prev => section ? prev.filter(q => q.section !== section) : []);
+      toast.success("Deleted");
     }
   };
 
@@ -256,11 +231,11 @@ export default function AddQuestions() {
     const success = await updateExam({ ...exam, questions });
     setSaving(false);
     if (success) toast.success("Saved!");
-    else toast.error("Failed to save");
+    else toast.error("Failed");
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center font-black animate-pulse">Initializing...</div>;
-  if (!exam) return <div className="p-20 text-center text-destructive font-black">EXAM_NOT_FOUND</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center font-bold text-emerald-600 animate-pulse">Loading...</div>;
+  if (!exam) return <div className="p-20 text-center text-destructive font-black">Exam not found</div>;
 
   const currentSections = Array.from(new Set([
     "General", 
@@ -269,356 +244,302 @@ export default function AddQuestions() {
   ]));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 animate-fade-in pb-20">
-      {/* Header Sticky */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
-        <div className="max-w-[1500px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-             <Link href="/admin/dashboard" className="p-3.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-2xl transition-all border border-slate-100 dark:border-slate-800">
-                <ArrowLeft className="w-5 h-5 text-slate-500" />
-             </Link>
-             <div>
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white truncate max-w-[400px] tracking-tight">{exam.title}</h1>
-                <div className="flex items-center gap-2.5 mt-1">
-                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">
-                      Curation Terminal • {questions.length} Matrix Items
-                   </p>
-                </div>
-             </div>
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 font-sans">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/70 backdrop-blur-md dark:bg-slate-950/70 dark:border-slate-800">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/dashboard" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border shadow-sm">
+              <ArrowLeft className="w-4 h-4 text-slate-500" />
+            </Link>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate max-w-[300px] leading-tight">{exam.title}</h1>
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider tabular-nums">
+                {questions.length} Questions Pool
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-             <Button variant="ghost" className="hidden lg:flex h-12 rounded-2xl px-6 font-black text-xs uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all" onClick={() => handleBulkDelete()}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Purge Matrix
-             </Button>
-             <Button className="h-12 rounded-2xl px-10 font-black text-xs uppercase tracking-[0.1em] bg-emerald-500 text-slate-950 shadow-[0_10px_30px_rgba(34,197,94,0.2)] hover:bg-emerald-400 hover:shadow-[0_15px_35px_rgba(34,197,94,0.3)] transition-all active:scale-95" onClick={saveAll} disabled={saving}>
-               {saving ? "COMMITING..." : <><Save className="w-4 h-4 mr-2" /> Commit Matrix</>}
-             </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-9 px-3 text-red-500 hover:bg-red-50 border-red-100 dark:border-red-900/30" onClick={() => handleBulkDelete()}>
+              <Trash2 className="w-3.5 h-3.5 mr-2" />
+              Clear Pool
+            </Button>
+            <Button size="sm" className="h-9 px-6 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg" onClick={saveAll} disabled={saving}>
+              {saving ? "Saving..." : <><Save className="w-3.5 h-3.5 mr-2" /> Submit</>}
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1500px] mx-auto p-6 lg:p-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          
-          {/* Left: Input Controls */}
-          <div className="lg:col-span-7 space-y-12">
-             
-             {/* Question Creator */}
-             <div className="group relative overflow-hidden rounded-[3rem] bg-white border border-slate-200 p-10 shadow-sm transition-all hover:shadow-2xl dark:bg-slate-900/50 dark:border-slate-800">
-                <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                   <div className="space-y-2">
-                      <h2 className="text-3xl font-black tracking-tight flex items-center gap-4 text-slate-900 dark:text-white">
-                        {editingId ? "Modify Entry" : "Matrix Entry"}
-                        {editingId && <Zap className="w-6 h-6 text-amber-500 fill-amber-500 animate-pulse" />}
-                      </h2>
-                      <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Construct evaluation logic.</p>
-                   </div>
-                   <Tabs value={qType} onValueChange={(v: any) => setQType(v)} className="bg-slate-100 p-1.5 rounded-2xl dark:bg-slate-800/80">
-                      <TabsList className="bg-transparent h-10 p-0 gap-1.5">
-                         {["mcq", "msq", "text"].map(t => (
-                            <TabsTrigger key={t} value={t} className="rounded-xl px-6 py-1.5 text-[10px] font-black uppercase tracking-[0.15em] data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 transition-all">
-                               {t}
-                            </TabsTrigger>
-                         ))}
-                      </TabsList>
-                   </Tabs>
+      <main className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Editor */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white dark:bg-slate-900 border rounded-xl shadow-sm overflow-hidden transition-all">
+              <div className="border-b p-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+                <div className="flex items-center gap-3">
+                  <div className={cn("p-2 rounded-lg", editingId ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600")}>
+                    {editingId ? <Zap className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  </div>
+                  <h2 className="font-bold text-slate-900 dark:text-white">
+                    {editingId ? "Edit Question" : "New Question"}
+                  </h2>
+                </div>
+                <Tabs value={qType} onValueChange={(v: any) => setQType(v)} className="bg-slate-200/50 p-1 rounded-lg dark:bg-slate-800">
+                  <TabsList className="bg-transparent h-7 p-0 space-x-1">
+                    {["mcq", "msq", "text"].map(t => (
+                      <TabsTrigger key={t} value={t} className="rounded-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-600 dark:data-[state=active]:bg-slate-700">
+                        {t}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Target Section</Label>
+                    <select value={qSection} onChange={(e) => setQSection(e.target.value)} className="w-full h-10 bg-white border rounded-lg px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/10 dark:bg-slate-800 dark:border-slate-700">
+                      {currentSections.map(s => <option key={s} value={s}>{s}</option>)}
+                      <option value="NEW">+ New Section</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Points</Label>
+                    <Input type="number" value={qMarks} onChange={(e) => setQMarks(e.target.value)} min="1" className="h-10 text-sm font-bold bg-white dark:bg-slate-800" />
+                  </div>
                 </div>
 
-                <div className="space-y-10">
-                   <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-3">
-                         <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Target Dimension</Label>
-                         <select 
-                           value={qSection} 
-                           onChange={(e) => setQSection(e.target.value)}
-                           className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-6 font-black text-sm outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all dark:bg-slate-800 dark:border-slate-700"
-                         >
-                           {currentSections.map(s => <option key={s} value={s}>{s}</option>)}
-                           <option value="NEW">+ PROVISION NEW</option>
-                         </select>
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Weight (PTS)</Label>
-                        <Input type="number" value={qMarks} onChange={(e) => setQMarks(e.target.value)} min="1" className="h-14 bg-slate-50 border-slate-100 rounded-2xl font-black text-lg focus:ring-4 focus:ring-emerald-500/10 dark:bg-slate-800" />
-                      </div>
-                   </div>
+                {qSection === "NEW" && (
+                  <Input placeholder="Section name..." className="h-10 border-emerald-200 bg-emerald-50/30 text-emerald-600 font-bold" autoFocus onBlur={(e) => setQSection(e.target.value.trim() || "General")} />
+                )}
 
-                   {qSection === "NEW" && (
-                      <div className="animate-in slide-in-from-top-4 duration-300">
-                        <Input 
-                          placeholder="IDENTIFIER NAME..." 
-                          className="h-14 rounded-2xl bg-emerald-50/30 border-emerald-200/50 font-black text-emerald-600 placeholder:text-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                          autoFocus
-                          onBlur={(e) => {
-                             if(e.target.value.trim()) setQSection(e.target.value.trim());
-                             else setQSection("General");
-                          }}
-                        />
-                      </div>
-                   )}
-
-                   <div className="space-y-4">
-                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Statement Content</Label>
-                      <div className="relative group/text">
-                         <textarea
-                           value={questionText}
-                           onChange={(e) => setQuestionText(e.target.value)}
-                           placeholder="Type the evaluation statement..."
-                           className="w-full min-h-[180px] p-8 rounded-[2rem] bg-slate-50 border border-slate-100 font-bold text-xl leading-relaxed focus:ring-8 focus:ring-emerald-500/5 transition-all outline-none resize-none dark:bg-slate-800 dark:border-slate-700"
-                         />
-                         <div className="absolute right-6 bottom-6 flex gap-3">
-                            <input type="file" accept="image/*" id="q-upload" className="hidden" onChange={(e) => handleImagePick(e, setQuestionImage)} />
-                            <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-white shadow-lg border border-slate-100 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-700 transition-all group/img" onClick={() => document.getElementById('q-upload')?.click()}>
-                               <ImageIcon className="w-6 h-6 text-slate-400 group-hover/img:text-emerald-500 transition-colors" />
-                            </Button>
-                            {questionImage && (
-                               <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-red-50 border border-red-100 text-red-500 hover:bg-red-100 transition-all shadow-lg shadow-red-500/10" onClick={() => setQuestionImage("")}>
-                                  <Trash2 className="w-6 h-6" />
-                               </Button>
-                            )}
-                         </div>
-                      </div>
-                      {questionImage && (
-                         <div className="relative inline-block mt-4 rounded-3xl overflow-hidden border-4 border-white shadow-2xl dark:border-slate-800 scale-in-center">
-                            <img src={questionImage} alt="Preview" className="max-h-56 object-contain" />
-                         </div>
-                      )}
-                   </div>
-
-                   {/* Options for MCQ/MSQ */}
-                   {qType !== "text" && (
-                      <div className="space-y-6 pt-4">
-                         <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Choice Pool</Label>
-                            <Button variant="ghost" className="h-9 px-4 rounded-xl text-emerald-600 bg-emerald-50 font-black text-[10px] uppercase tracking-[0.1em] hover:bg-emerald-100 transition-all" onClick={() => setOptions([...options, { text: "" }])}>
-                               <Plus className="w-3.5 h-3.5 mr-2" /> Extend Matrix
-                            </Button>
-                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {options.map((opt, idx) => {
-                               const selected = correctAnswer.split(",").includes(String(idx));
-                               return (
-                                  <div key={idx} className={`relative flex flex-col gap-5 p-6 rounded-[2rem] border-2 transition-all group/opt ${selected ? "border-emerald-500 bg-emerald-50/30 shadow-[0_10px_30px_rgba(34,197,94,0.05)] dark:bg-emerald-500/5" : "border-slate-50 bg-slate-50/50 hover:border-emerald-200 dark:bg-slate-800 dark:border-slate-800"}`}>
-                                     <div className="flex items-start gap-5">
-                                        <span className={`h-10 w-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all shadow-sm ${selected ? "bg-emerald-500 text-slate-950" : "bg-white text-slate-300 dark:bg-slate-700"}`}>
-                                           {indexToLetter[idx]}
-                                        </span>
-                                        <textarea 
-                                          value={opt.text} 
-                                          onChange={(e) => {
-                                            const next = [...options];
-                                            next[idx].text = e.target.value;
-                                            setOptions(next);
-                                          }}
-                                          placeholder="Define choice..."
-                                          className="flex-1 bg-transparent border-none p-0 text-sm font-bold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 focus:ring-0 outline-none resize-none min-h-[60px] leading-relaxed"
-                                        />
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-0 group-hover/opt:opacity-100 transition-opacity text-slate-300 hover:text-red-500" onClick={() => setOptions(options.filter((_, i) => i !== idx))}>
-                                           <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                     </div>
-                                     <div className="flex items-center justify-between">
-                                        <Button variant="ghost" className={`h-11 rounded-2xl px-5 text-[10px] font-black uppercase tracking-[0.1em] transition-all ${selected ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400" : "bg-white text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-700 shadow-sm"}`} onClick={() => {
-                                           if (qType === 'msq') {
-                                              const current = correctAnswer.split(",").filter(v => v !== "");
-                                              if (current.includes(String(idx))) setCorrectAnswer(current.filter(v => v !== String(idx)).join(","));
-                                              else setCorrectAnswer([...current, String(idx)].sort().join(","));
-                                           } else setCorrectAnswer(String(idx));
-                                        }}>
-                                           {selected ? <CheckCircle2 className="w-4 h-4 mr-2" /> : null}
-                                           {selected ? "VALID ENTRY" : "SET AS VALID"}
-                                        </Button>
-                                     </div>
-                                  </div>
-                               );
-                            })}
-                         </div>
-                      </div>
-                   )}
-
-                   {/* Text Validation */}
-                   {qType === "text" && (
-                      <div className="space-y-4 pt-4">
-                         <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Canonical Matrix Key</Label>
-                         <Input 
-                           value={correctAnswer} 
-                           onChange={(e) => setCorrectAnswer(e.target.value)} 
-                           placeholder="Enter precise evaluation string..."
-                           className="h-16 rounded-2xl border-slate-100 bg-slate-50 font-black text-emerald-600 px-8 text-lg placeholder:text-slate-300 dark:bg-slate-800"
-                         />
-                         <div className="p-5 rounded-[1.5rem] bg-amber-500/5 border border-amber-500/10 flex items-center gap-4">
-                            <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
-                            <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest leading-none">Note: Evaluation uses case-insensitive string comparison logic.</p>
-                         </div>
-                      </div>
-                   )}
-
-                   <div className="pt-10 border-t border-slate-100 dark:border-slate-800 flex gap-6">
-                      {editingId && (
-                         <Button variant="ghost" className="flex-1 h-16 rounded-[2rem] font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all" onClick={resetForm}>Abort Modification</Button>
-                      )}
-                      <Button className="flex-1 h-20 rounded-[2.5rem] bg-slate-950 text-white font-black text-xl hover:bg-emerald-500 hover:text-slate-950 shadow-2xl transition-all group active:scale-[0.98]" onClick={addOrUpdateQuestion}>
-                         {editingId ? "COMMIT UPDATE" : "PUBLISH TO MATRIX"}
-                         <ChevronRight className="ml-3 h-6 w-6 transform group-hover:translate-x-1 transition-transform" />
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Question Content</Label>
+                  <div className="relative border rounded-xl overflow-hidden bg-slate-50/30 dark:bg-slate-800/20 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all">
+                    <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} placeholder="Type question statement..." className="w-full min-h-[120px] p-4 bg-transparent outline-none resize-none text-base font-medium leading-relaxed" />
+                    <div className="absolute right-3 bottom-3 flex gap-2">
+                      <input type="file" accept="image/*" id="q-img" className="hidden" onChange={(e) => handleImagePick(e, setQuestionImage)} />
+                      <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg bg-white shadow-sm border" onClick={() => document.getElementById('q-img')?.click()}>
+                        <ImageIcon className="w-4 h-4 text-slate-500" />
                       </Button>
-                   </div>
-                </div>
-             </div>
-
-             {/* Import / AI Tools */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {/* AI Generator */}
-                <div className="p-10 rounded-[3rem] bg-emerald-500 text-slate-950 shadow-2xl shadow-emerald-500/20 group relative overflow-hidden">
-                   <div className="absolute right-0 top-0 h-40 w-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
-                   <div className="flex items-center gap-4 mb-8">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-950 flex items-center justify-center">
-                         <Sparkles className="w-6 h-6 text-emerald-500" />
-                      </div>
-                      <h3 className="text-2xl font-black tracking-tighter">AI Logic Hub</h3>
-                   </div>
-                   <div className="space-y-5">
-                      <Input 
-                        placeholder="Context ID (e.g. Neural Networks)" 
-                        value={aiTopic} 
-                        onChange={(e) => setAiTopic(e.target.value)}
-                        className="h-14 bg-slate-950/5 border-slate-950/10 text-slate-950 placeholder:text-slate-950/40 rounded-2xl font-black focus:ring-slate-950/10"
-                      />
-                      <div className="flex gap-3">
-                         <Input type="number" placeholder="QTY" value={aiCount} onChange={(e) => setAiCount(e.target.value)} className="h-14 w-28 bg-slate-950/5 border-slate-950/10 text-slate-950 rounded-2xl font-black text-center" />
-                         <Button className="flex-1 h-14 bg-slate-950 text-white font-black rounded-2xl hover:bg-slate-800 shadow-lg transition-all active:scale-95" onClick={handleAiGenerate} disabled={aiGenerating}>
-                            {aiGenerating ? "COMPUTING..." : "PROVISION"}
-                         </Button>
-                      </div>
-                   </div>
+                      {questionImage && (
+                        <Button variant="destructive" size="icon" className="h-8 w-8 rounded-lg shadow-sm" onClick={() => setQuestionImage("")}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {questionImage && (
+                    <div className="mt-2 border rounded-xl overflow-hidden inline-block shadow-sm">
+                      <img src={questionImage} alt="Q" className="max-h-32" />
+                    </div>
+                  )}
                 </div>
 
-                {/* RAG Agent */}
-                <div className="p-10 rounded-[3rem] bg-white border border-slate-200 shadow-sm transition-all hover:shadow-xl dark:bg-slate-900/50 dark:border-slate-800">
-                   <div className="flex items-center gap-4 mb-8">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
-                         <FileText className="w-6 h-6 text-slate-400" />
-                      </div>
-                      <h3 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Doc Processor</h3>
-                   </div>
-                   <div className="space-y-5">
-                      <div className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/50 group/upload cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 transition-all dark:bg-slate-800/20 dark:border-slate-800" onClick={() => fileInputRef.current?.click()}>
-                         <Upload className="w-8 h-8 text-slate-300 mb-3 group-hover/upload:text-emerald-500 transition-colors" />
-                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                            {uploading ? "PARSING CONTEXT..." : "SOURCE PDF UPLOAD"}
-                         </p>
-                         <input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={handlePdfUpload} />
-                      </div>
-                      <div className="px-2">
-                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.15em] opacity-40 leading-relaxed italic text-center">AI will extract context and generate dual-weightage matrix.</p>
-                      </div>
-                   </div>
+                {qType !== "text" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Responses</Label>
+                      <Button variant="ghost" size="sm" className="h-7 text-emerald-600 text-[10px] font-bold" onClick={() => setOptions([...options, { text: "" }])}>
+                        <Plus className="w-3 h-3 mr-1" /> Add Option
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {options.map((opt, idx) => {
+                        const isCorrect = correctAnswer.split(",").includes(String(idx));
+                        return (
+                          <div key={idx} className={cn("p-4 border rounded-xl transition-all space-y-3", isCorrect ? "bg-emerald-50/50 border-emerald-500/30 dark:bg-emerald-500/5 dark:border-emerald-500/30" : "bg-white dark:bg-slate-800")}>
+                            <div className="flex items-start gap-3">
+                              <span className={cn("h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0", isCorrect ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-400 dark:bg-slate-700")}>
+                                {indexToLetter[idx]}
+                              </span>
+                              <textarea value={opt.text} onChange={(e) => {
+                                const next = [...options];
+                                next[idx].text = e.target.value;
+                                setOptions(next);
+                              }} placeholder="Option text..." className="flex-1 bg-transparent border-none p-0 text-sm font-medium focus:ring-0 outline-none resize-none min-h-[40px]" />
+                              <button onClick={() => setOptions(options.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 transition-colors">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              <Button size="sm" variant="ghost" className={cn("h-7 rounded-lg px-3 text-[10px] font-bold", isCorrect ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-slate-50 text-slate-500 dark:bg-slate-700")} onClick={() => {
+                                if (qType === 'msq') {
+                                  let current = correctAnswer.split(",").filter(Boolean);
+                                  if (current.includes(String(idx))) current = current.filter(v => v !== String(idx));
+                                  else current.push(String(idx));
+                                  setCorrectAnswer(current.sort().join(","));
+                                } else setCorrectAnswer(String(idx));
+                              }}>
+                                {isCorrect ? "CORRECT" : "SET CORRECT"}
+                              </Button>
+                              <div className="flex gap-2">
+                                <input type="file" accept="image/*" id={`opt-img-${idx}`} className="hidden" onChange={(e) => handleImagePick(e, (url) => {
+                                  const next = [...options]; next[idx].image = url; setOptions(next);
+                                })} />
+                                <button onClick={() => document.getElementById(`opt-img-${idx}`)?.click()} className={cn("p-1.5 rounded-md", opt.image ? "text-emerald-500 bg-emerald-50" : "text-slate-300 hover:text-emerald-500")}>
+                                  <ImageIcon className="w-3.5 h-3.5" />
+                                </button>
+                                {opt.image && (
+                                  <button onClick={() => { const next = [...options]; delete next[idx].image; setOptions(next); }} className="p-1.5 text-slate-300 hover:text-red-500">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {opt.image && <img src={opt.image} alt="Opt" className="h-16 rounded-lg border" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {qType === "text" && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Exact Answer Match</Label>
+                    <Input value={correctAnswer} onChange={(e) => setCorrectAnswer(e.target.value)} placeholder="Type answer..." className="h-10 text-sm font-bold text-emerald-600" />
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t bg-slate-50/50 dark:bg-slate-800/10 flex gap-3">
+                {editingId && (
+                  <Button variant="ghost" className="h-10 px-6 font-bold text-xs uppercase text-slate-500" onClick={resetForm}>Cancel</Button>
+                )}
+                <Button className="flex-1 h-10 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider hover:bg-emerald-600 transition-all rounded-lg" onClick={addOrUpdateQuestion}>
+                  {editingId ? "Update Question" : "Save to Pool"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-emerald-600 p-6 rounded-xl text-white shadow-md relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-12 h-12" />
                 </div>
-             </div>
+                <h3 className="font-bold flex items-center gap-2 mb-4">
+                  <Sparkles className="w-4 h-4" /> AI Generator
+                </h3>
+                <div className="space-y-3">
+                  <Input placeholder="Topic..." value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="h-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm font-medium" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[8px] uppercase tracking-widest opacity-60">Count</Label>
+                      <Input type="number" value={aiCount} onChange={(e) => setAiCount(e.target.value)} className="h-8 bg-white/10 border-white/20 text-center text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[8px] uppercase tracking-widest opacity-60">Level</Label>
+                      <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} className="h-8 w-full bg-white/10 border-white/20 rounded-md text-[10px] font-bold px-2 outline-none">
+                        <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="mixed">Mixed</option>
+                      </select>
+                    </div>
+                  </div>
+                  <Button className="w-full h-9 bg-white text-emerald-600 font-bold text-xs uppercase hover:bg-slate-100" onClick={handleAiGenerate} disabled={aiGenerating}>
+                    {aiGenerating ? "Generating..." : "Generate AI Questions"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border p-6 rounded-xl shadow-sm space-y-4">
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-400" /> RAG Agent
+                </h3>
+                <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-800/20 hover:border-emerald-300 transition-colors cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+                   <Upload className="w-6 h-6 text-slate-300 mb-2 group-hover:text-emerald-500" />
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                     {uploading ? "Parsing..." : "Drop PDF Source"}
+                   </span>
+                   <input type="file" accept=".pdf" ref={fileInputRef} className="hidden" onChange={handlePdfUpload} />
+                </div>
+                <p className="text-[9px] text-slate-400 text-center font-medium italic opacity-60">AI will automatically categorize extracted questions into sections.</p>
+              </div>
+            </div>
           </div>
 
-          {/* Right: Pool Preview */}
-          <div className="lg:col-span-5 space-y-10">
-             <div className="flex items-center justify-between px-3">
-                <div className="flex items-center gap-4">
-                   <LayoutGrid className="w-6 h-6 text-emerald-500" />
-                   <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">Active Matrix</h2>
+          {/* Question Pool */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="sticky top-20 space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4 text-emerald-600" />
+                  <h2 className="font-bold text-slate-900 dark:text-white">Question Pool</h2>
                 </div>
-                <div className="h-10 w-10 rounded-2xl bg-slate-50 flex items-center justify-center font-black text-[10px] text-slate-400 dark:bg-slate-900">
-                   {questions.length}
-                </div>
-             </div>
+                <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full dark:bg-slate-800 whitespace-nowrap">
+                  {questions.length} Items Total
+                </span>
+              </div>
 
-             <div className="space-y-8 max-h-[1600px] overflow-y-auto pr-4 no-scrollbar pb-20">
+              <div className="space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto pr-2 custom-scrollbar pb-10">
                 {questions.length === 0 ? (
-                  <div className="p-32 text-center bg-white rounded-[4rem] border border-slate-100 shadow-sm dark:bg-slate-900/50 dark:border-slate-800">
-                      <div className="h-20 w-20 rounded-3xl bg-slate-50 mx-auto flex items-center justify-center mb-10 dark:bg-slate-800">
-                         <FileText className="w-10 h-10 text-slate-200" />
-                      </div>
-                      <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Matrix Void</p>
+                  <div className="p-12 text-center bg-white border border-dashed rounded-xl dark:bg-slate-900">
+                    <FileText className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+                    <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">Pool is empty</p>
                   </div>
                 ) : (
                   Object.entries(
                     questions.reduce((acc, q) => {
-                      if (!acc[q.section || "General"]) acc[q.section || "General"] = [];
-                      acc[q.section || "General"].push(q);
+                      const sec = q.section || "General";
+                      if (!acc[sec]) acc[sec] = [];
+                      acc[sec].push(q);
                       return acc;
                     }, {} as Record<string, Question[]>)
                   ).map(([sectionName, sectionQuestions]) => (
-                    <div key={sectionName} className="space-y-5">
-                       <div className="flex items-center justify-between bg-slate-950 p-5 rounded-[2.2rem] shadow-xl shadow-slate-200 dark:shadow-none transition-all hover:scale-[1.01]">
-                          <div className="flex items-center gap-4">
-                            <div className="h-8 w-1 bg-emerald-500 rounded-full" />
-                            <span className="text-xs font-black uppercase tracking-[0.2em] text-white">{sectionName}</span>
-                            <span className="text-[10px] bg-white/10 text-white/60 px-3 py-1.5 rounded-xl font-black tracking-widest leading-none">
-                               {sectionQuestions.length} ITEMS
-                            </span>
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 text-white/20 hover:text-red-500 hover:bg-white/5 transition-all" onClick={() => handleBulkDelete(sectionName)}>
-                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                       </div>
+                    <div key={sectionName} className="space-y-2">
+                      <div className="flex items-center justify-between py-1 border-b mb-2 px-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{sectionName}</span>
+                        <button onClick={() => handleBulkDelete(sectionName)} className="text-[9px] font-bold text-red-400 hover:text-red-500">Delete Group</button>
+                      </div>
 
-                       <div className="grid grid-cols-1 gap-5 pl-2">
-                          {sectionQuestions.map((q, i) => (
-                             <div key={q.id} className={`group relative p-8 bg-white rounded-[2.5rem] border transition-all hover:shadow-2xl dark:bg-slate-900/80 ${editingId === q.id ? "border-emerald-500 shadow-2xl scale-[1.03]" : "border-slate-100 dark:border-slate-800"}`}>
-                                <div className="flex items-start gap-6">
-                                   <div className="flex flex-col items-center gap-3 pt-1">
-                                      <span className="text-[10px] font-black text-slate-300 tabular-nums leading-none">#{questions.indexOf(q) + 1}</span>
-                                      <div className={`w-1.5 h-16 rounded-full transition-all ${q.type === 'text' ? 'bg-amber-400' : q.type === 'msq' ? 'bg-blue-400' : 'bg-emerald-500'}`} />
-                                   </div>
-                                   <div className="flex-1 min-w-0">
-                                      <div className="flex items-center justify-between mb-5">
-                                         <div className="flex items-center gap-3">
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md">{q.type}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">{q.marks} PTS</span>
-                                         </div>
-                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all scale-95 origin-right">
-                                            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-100" onClick={() => editQuestion(q.id)}>
-                                               <SquarePen className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-500 transition-all" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}>
-                                               <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                         </div>
-                                      </div>
-                                      <p className="text-base font-black text-slate-900 dark:text-white leading-[1.6] mb-6 line-clamp-3 group-hover:line-clamp-none transition-all">{q.question}</p>
-                                      
-                                      {q.type !== 'text' ? (
-                                         <div className="flex flex-wrap gap-2.5">
-                                            {q.options?.map((opt, idx) => {
-                                               const isCorrect = q.correctAnswer.split(",").includes(String(idx));
-                                               if (!opt.text) return null;
-                                               return (
-                                                  <div key={idx} className={`text-[9px] px-3.5 py-2 rounded-xl flex items-center gap-2.5 transition-all ${isCorrect ? "bg-emerald-500/10 text-emerald-600 font-black border border-emerald-500/20" : "bg-slate-50 text-slate-400 border border-slate-100 dark:bg-slate-800 dark:border-slate-700"}`}>
-                                                     <span className="font-black opacity-30 text-[10px]">{indexToLetter[idx]}</span>
-                                                     <span className="truncate max-w-[140px] tracking-tight">{opt.text}</span>
-                                                  </div>
-                                               );
-                                            })}
-                                         </div>
-                                      ) : (
-                                         <div className="mt-2 p-5 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/10 dark:bg-slate-800/80">
-                                            <div className="flex items-center justify-between">
-                                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">VALIDATION_KEY</span>
-                                               <span className="text-[10px] font-black text-emerald-600 leading-none">{q.correctAnswer}</span>
-                                            </div>
-                                         </div>
-                                      )}
-                                   </div>
+                      <div className="space-y-2">
+                        {sectionQuestions.map((q, i) => (
+                          <div key={q.id} className={cn("group p-4 bg-white dark:bg-slate-900 border rounded-xl transition-all hover:shadow-md", editingId === q.id && "ring-2 ring-emerald-500 border-transparent shadow-lg")}>
+                            <div className="flex items-start gap-4">
+                              <div className="flex flex-col items-center gap-1.5 shrink-0 pt-0.5">
+                                <span className="text-[9px] font-bold text-slate-400 tabular-nums leading-none">#{questions.indexOf(q) + 1}</span>
+                                <div className={cn("w-1 flex-1 min-h-[40px] rounded-full", q.type === 'text' ? 'bg-amber-400' : 'bg-emerald-500')} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border dark:bg-slate-800">{q.type}</span>
+                                    <span className="text-[8px] font-bold text-emerald-600">{q.marks} Pts</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button onClick={() => editQuestion(q.id)} className="p-1.5 hover:text-emerald-600 text-slate-300 transition-colors"><SquarePen className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => setQuestions(prev => prev.filter(it => it.id !== q.id))} className="p-1.5 hover:text-red-500 text-slate-300 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                                  </div>
                                 </div>
-                             </div>
-                          ))}
-                       </div>
+                                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2 group-hover:line-clamp-none transition-all">{q.question}</h4>
+                                
+                                {q.type !== 'text' && (
+                                  <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {q.options?.map((opt, idx) => {
+                                      const isCorrect = q.correctAnswer.split(",").includes(String(idx));
+                                      if (!opt.text) return null;
+                                      return (
+                                        <div key={idx} className={cn("text-[9px] px-2 py-1 rounded-md border flex items-center gap-1.5", isCorrect ? "bg-emerald-50 border-emerald-100 text-emerald-700 font-bold" : "bg-slate-50/50 text-slate-400 dark:bg-slate-800/50")}>
+                                          <span className="opacity-40">{indexToLetter[idx]}</span>
+                                          <span className="truncate max-w-[100px]">{opt.text}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))
                 )}
-             </div>
+              </div>
+            </div>
           </div>
-
         </div>
-      </div>
+      </main>
     </div>
   );
 }

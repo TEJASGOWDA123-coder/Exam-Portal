@@ -53,67 +53,146 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 animate-fade-in pb-20">
+    <div className="w-full space-y-12 animate-fade-in pb-20">
       {/* Welcome & Quick Actions */}
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 px-8 py-16 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-none border border-white/5">
-        <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-emerald-600/10 blur-[120px]" />
-        <div className="absolute -left-20 -bottom-20 h-96 w-96 rounded-full bg-emerald-900/10 blur-[120px]" />
-        
-        <div className="relative flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">
-              <TrendingUp className="h-3 w-3" />
-              <span>Performance Hub</span>
-            </div>
-            <h1 className="text-5xl font-black tracking-tight md:text-6xl text-white">
-              Hello, <span className="text-emerald-500">{session?.user?.name || "Admin"}</span>
-            </h1>
-            <p className="text-xl text-slate-400 max-w-xl leading-relaxed">Your emerald evaluation center is ready. Monitor, create, and refine your examinations here.</p>
-          </div>
-          <div className="flex shrink-0 gap-4">
-            {role === "superadmin" && (
-              <Button variant="outline" asChild className="h-16 px-8 rounded-2xl border-white/10 bg-white/5 font-black text-white hover:bg-white/10 hover:border-white/20 transition-all">
+      {/* Header section inspired by image */}
+      <section className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-4">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-3">
+            Hello, <span className="text-emerald-500">Chief Admin</span>
+          </h1>
+          <p className="text-slate-400 font-bold tracking-wide text-sm opacity-80">
+            Today is {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex gap-4">
+             {role === "superadmin" && (
+              <Button variant="outline" asChild className="h-14 px-6 rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-emerald-950/40 font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                 <Link href="/admin/manage-admins">
                   <ShieldCheck className="mr-3 h-5 w-5" />
-                  Staff Panel
+                  Staff
                 </Link>
               </Button>
             )}
-            <Button asChild className="h-16 px-10 rounded-2xl bg-emerald-500 font-black text-slate-950 shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(34,197,94,0.4)] transition-all active:scale-95">
+            <Button asChild className="h-14 w-14 rounded-full bg-emerald-500 p-0 flex items-center justify-center shadow-[0_10px_25px_rgba(16,185,129,0.3)] hover:scale-110 active:scale-95 transition-all">
               <Link href="/admin/create-exam">
-                <Plus className="mr-2 h-5 w-5" />
-                Initialize Exam
+                <Plus className="h-6 w-6 text-white" />
               </Link>
             </Button>
+        </div>
+      </section>
+
+      {/* Main Stat Card - Inspired by "Total Exams Conducted" */}
+      <section className="px-4">
+        <div className="bg-white dark:bg-emerald-950/40 rounded-[2.5rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-emerald-50/50 to-transparent dark:from-emerald-950/20 pointer-events-none" />
+          
+          <div className="flex flex-col items-start gap-8 relative z-10">
+            <div className="flex items-center justify-between w-full">
+              <div className="h-16 w-16 rounded-[1.25rem] bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center border border-emerald-100 dark:border-emerald-800/50">
+                <FileText className="h-8 w-8 text-emerald-500" />
+              </div>
+              <div className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+                <TrendingUp className="h-3 w-3" />
+                12% vs last month
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-7xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">
+                {exams.length.toLocaleString()}
+              </p>
+              <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">Total Assessments Curated</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((s) => (
-          <div key={s.label} className="group relative rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:border-emerald-500/30 hover:shadow-2xl dark:border-slate-800 dark:bg-slate-900/50">
-            <div className="flex items-center justify-between mb-8">
-              <div className={`rounded-2xl ${s.bg} p-4 transition-transform group-hover:rotate-6`}>
-                <s.icon className={`h-6 w-6 ${s.color}`} />
-              </div>
-              <div className="h-1 w-12 rounded-full bg-slate-100 dark:bg-slate-800" />
-            </div>
-            <div>
-              <p className="text-5xl font-black text-slate-950 dark:text-white tabular-nums tracking-tighter">{s.value}</p>
-              <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">{s.label}</p>
-            </div>
+      {/* Secondary Stats Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+        {/* Active Students Style */}
+        <div className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl group">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current Cohort</span>
           </div>
-        ))}
+          <div className="flex items-end justify-between mb-4">
+            <p className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+              {students.length.toLocaleString()}
+            </p>
+          </div>
+          <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+             <div className="h-full bg-emerald-500 rounded-full w-2/3 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+          </div>
+        </div>
+
+        {/* Pending Results Style */}
+        <div className="bg-white dark:bg-slate-900/40 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl group">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Analysis Pending</span>
+          </div>
+          <p className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">
+            {exams.filter(e => e.status === 'completed').length}
+          </p>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+             <Clock className="h-3 w-3" /> Awaiting data audit
+          </div>
+        </div>
       </section>
 
       {/* Main Content */}
-      <section className="space-y-8">
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-3">
+      {/* Recent Activity Section inspired by "Recent Activity" list */}
+      <section className="space-y-6 px-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Recent Activity</h2>
+          <Button variant="ghost" asChild className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50/50 px-4 rounded-xl hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/40">
+            <Link href="/admin/exam">See All</Link>
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {exams.slice(0, 4).map((exam, idx) => (
+            <div key={exam.id} className="group bg-white dark:bg-slate-900/40 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-800 flex items-center gap-6 shadow-sm hover:shadow-xl transition-all">
+              <div className={`h-16 w-16 rounded-2xl flex items-center justify-center relative ${
+                exam.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50' : 
+                'bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50'
+              }`}>
+                {exam.status === 'active' ? <Clock className="h-7 w-7 text-emerald-500" /> : <FileText className="h-7 w-7 text-slate-400" />}
+                {exam.status === 'active' && (
+                  <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                    <CheckCircle className="h-3 w-3 text-white" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1">
+                <h4 className="font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-500 transition-colors">{exam.title}</h4>
+                <p className="text-xs font-bold text-slate-400 mt-1">Scheduled for Batch A-2024</p>
+              </div>
+
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums italic">
+                {idx === 0 ? "2m ago" : `${(idx + 1) * 15}m ago`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Floating Action Button - Mobile Insight */}
+      <div className="fixed bottom-8 right-8 z-50 md:hidden">
+        <Button asChild className="h-16 w-16 rounded-full bg-emerald-500 p-0 flex items-center justify-center shadow-[0_15px_35px_rgba(16,185,129,0.4)] hover:scale-110 active:scale-95 transition-all">
+          <Link href="/admin/create-exam">
+            <Plus className="h-8 w-8 text-white" />
+          </Link>
+        </Button>
+      </div>
+
+      {/* Examination Matrix Grid Section - Preserving Original Content with New Theme */}
+      <section className="space-y-8 px-4 pt-12">
+        <div className="flex items-center gap-3">
             <div className="h-10 w-1 pt-1.5 bg-emerald-500 rounded-full" />
             <h2 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">Examination Matrix</h2>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">

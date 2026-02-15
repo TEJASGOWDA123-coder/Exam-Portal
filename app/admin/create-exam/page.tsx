@@ -79,7 +79,7 @@ export default function CreateExam() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-6 animate-fade-in">
+    <div className="w-full py-10 px-4 animate-fade-in">
       <div className="mb-12">
          <div className="flex items-center gap-4 mb-6">
             <Link href="/admin/dashboard" className="p-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200 dark:border-slate-800">
@@ -107,7 +107,7 @@ export default function CreateExam() {
               02. Chronology
             </TabsTrigger>
             <TabsTrigger value="sections" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              03. Dimensions
+              03. Sections
             </TabsTrigger>
             <TabsTrigger value="proctoring" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
               04. Integrity
@@ -123,7 +123,7 @@ export default function CreateExam() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Advanced Cryptographic Protocols"
-                    className="h-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                    className="h-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                   />
                   <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.1em] opacity-60 ml-1">Establish a unique identifier for the evaluators and students.</p>
                </div>
@@ -142,21 +142,21 @@ export default function CreateExam() {
                         value={duration}
                         onChange={(e) => setDuration(e.target.value)}
                         placeholder="60"
-                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                      />
                   </div>
                </div>
                <div className="space-y-4">
                   <Label htmlFor="marks" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Terminal Score</Label>
                   <div className="relative group">
-                     <Plus className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                     <Plus className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
                      <Input
                         id="marks"
                         type="number"
                         value={totalMarks}
                         onChange={(e) => setTotalMarks(e.target.value)}
                         placeholder="100"
-                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                      />
                   </div>
                </div>
@@ -167,7 +167,7 @@ export default function CreateExam() {
                     type="datetime-local"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="h-16 rounded-[1.5rem] border-slate-200 font-black text-sm bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-slate-800 dark:bg-slate-900 shadow-sm"
+                    className="h-16 rounded-[1.5rem] border-slate-200 font-black text-sm bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
                   />
                </div>
                <div className="space-y-4">
@@ -188,7 +188,7 @@ export default function CreateExam() {
                <div className="rounded-[2rem] bg-emerald-500/5 p-8 border border-emerald-500/10 dark:bg-emerald-500/5 dark:border-emerald-500/20 shadow-sm">
                   <div className="flex items-center gap-4 mb-4 text-emerald-600">
                      <Sparkles className="h-6 w-6" />
-                     <h4 className="font-black text-lg tracking-tight uppercase tracking-widest">Dimension Control</h4>
+                     <h4 className="font-black text-lg tracking-tight uppercase tracking-widest">Section Control</h4>
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-bold italic">
                      Define the architectural boundaries of your assessment sections. AI will use these constraints to curate dynamic matrix for each student.
@@ -197,7 +197,7 @@ export default function CreateExam() {
 
                 <div className="space-y-4">
                   {sectionsConfig.map((sec, idx) => (
-                    <div key={idx} className="group relative flex flex-col md:flex-row items-end gap-6 p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm transition-all hover:shadow-2xl dark:bg-slate-900/40 dark:border-slate-800">
+                    <div key={idx} className="group relative flex flex-col md:flex-row items-end gap-6 p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm transition-all hover:shadow-2xl dark:bg-emerald-950/20 dark:border-emerald-500/10">
                       <div className="flex-1 space-y-3 w-full">
                         <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Dimension Identifier</Label>
                         <Input 
@@ -242,7 +242,7 @@ export default function CreateExam() {
                     onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10 }])}
                   >
                     <Plus className="w-5 h-5 mr-4 group-hover:rotate-90 transition-transform" />
-                    Extend Matrix Configuration
+                    Add Section
                   </Button>
                </div>
             </div>
@@ -271,7 +271,7 @@ export default function CreateExam() {
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-slate-900/40 dark:border-slate-800 shadow-sm">
+                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-emerald-950/20 dark:border-emerald-500/10 shadow-sm">
                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Digital Surveillance</h5>
                      <ul className="space-y-5">
                         {["Facial Identity Verification", "Gaze Vector tracking", "Neural Speech analysis", "Peripheral monitoring"].map((item) => (
@@ -282,7 +282,7 @@ export default function CreateExam() {
                         ))}
                      </ul>
                   </div>
-                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-slate-900/40 dark:border-slate-800 shadow-sm">
+                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-emerald-950/20 dark:border-emerald-500/10 shadow-sm">
                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Compliance Protocol</h5>
                      <ul className="space-y-5">
                         {["Matrix Escape (3 strikes)", "Browser Sandbox isolation", "Full-session telemetry", "Instant termination"].map((item) => (
@@ -304,10 +304,10 @@ export default function CreateExam() {
            </p>
            <div className="flex items-center gap-6 w-full md:w-auto">
               <Button variant="ghost" type="button" onClick={() => router.back()} className="h-16 px-10 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
-                Abort
+                Cancel
               </Button>
               <Button type="submit" className="h-16 px-14 rounded-2xl bg-emerald-500 font-black text-slate-950 shadow-[0_10px_30px_rgba(34,197,94,0.3)] hover:bg-emerald-400 hover:shadow-[0_15px_35px_rgba(34,197,94,0.4)] transition-all active:scale-95 flex-1 md:flex-none">
-                Provision & Architect Pool
+                Submit
                 <ChevronRight className="ml-3 h-5 w-5" />
               </Button>
            </div>

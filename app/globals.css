@@ -39,6 +39,19 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  /* Refined Emerald Scale */
+  --color-emerald-50: hsl(154 76% 96%);
+  --color-emerald-100: hsl(154 76% 92%);
+  --color-emerald-200: hsl(154 76% 84%);
+  --color-emerald-300: hsl(154 76% 72%);
+  --color-emerald-400: hsl(154 76% 58%);
+  --color-emerald-500: hsl(154 76% 45%);
+  --color-emerald-600: hsl(154 76% 38%);
+  --color-emerald-700: hsl(154 76% 30%);
+  --color-emerald-800: hsl(154 76% 22%);
+  --color-emerald-900: hsl(154 76% 16%);
+  --color-emerald-950: hsl(154 76% 10%);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -52,7 +65,7 @@
 :root {
   --radius: 1.25rem; /* 20px */
 
-  --background: 210 20% 98%;
+  --background: 210 20% 99%; /* Very subtle grey-white */
   --foreground: 222 47% 11%;
 
   --card: 0 0% 100%;
@@ -61,16 +74,16 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 142 70% 45%; /* Emerald Green #22C55E */
+  --primary: 154 76% 45%; /* More vibrant Emerald from image */
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 142 20% 96%;
+  --secondary: 154 30% 97%;
   --secondary-foreground: 222 47% 11%;
 
-  --muted: 210 40% 96%;
+  --muted: 210 20% 97%;
   --muted-foreground: 215 16% 47%;
 
-  --accent: 142 60% 50%;
+  --accent: 154 70% 50%;
   --accent-foreground: 222 47% 11%;
 
   --destructive: 0 84% 60%;
@@ -78,7 +91,7 @@
 
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 142 70% 45%;
+  --ring: 154 76% 45%;
 
   /* Effects */
   --gradient-emerald: linear-gradient(180deg, #0F2E1C 0%, #083424 100%);
@@ -89,33 +102,33 @@
    DARK MODE (Emerald SaaS)
 ----------------------------------- */
 .dark {
-  --background: 154 50% 6%; /* Deep Dark Green base */
+  --background: 154 40% 4%; /* Deeper, nearly black-forest */
   --foreground: 210 40% 98%;
 
-  --card: 154 50% 9%;
+  --card: 154 40% 7%;
   --card-foreground: 210 40% 98%;
 
-  --popover: 154 50% 9%;
+  --popover: 154 40% 7%;
   --popover-foreground: 210 40% 98%;
 
-  --primary: 142 70% 45%;
-  --primary-foreground: 222 47% 11%;
+  --primary: 154 76% 45%; /* Consistent vibrant emerald */
+  --primary-foreground: 154 50% 4%;
 
-  --secondary: 154 30% 14%;
+  --secondary: 154 30% 10%;
   --secondary-foreground: 210 40% 98%;
 
-  --muted: 154 30% 14%;
+  --muted: 154 20% 12%;
   --muted-foreground: 215 20% 65%;
 
-  --accent: 142 70% 45%;
+  --accent: 154 76% 45%;
   --accent-foreground: 210 40% 98%;
 
   --destructive: 0 63% 31%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 154 30% 12%;
-  --input: 154 30% 12%;
-  --ring: 142 70% 45%;
+  --border: 154 20% 10%;
+  --input: 154 20% 10%;
+  --ring: 154 76% 45%;
 }
 
 /* -----------------------------------
@@ -137,8 +150,13 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-black tracking-tight;
+    font-family: "Inter", system-ui, sans-serif;
   }
+}
+
+@theme inline {
+  --font-title: "Inter", sans-serif;
 }
 
 /* -----------------------------------

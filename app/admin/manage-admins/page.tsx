@@ -133,7 +133,7 @@ export default function ManageAdmins() {
     }
 
     return (
-        <div className="animate-fade-in max-w-5xl mx-auto pb-10">
+        <div className="animate-fade-in w-full pb-10 px-4">
             <div className="flex items-center gap-4 mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-bold">
                     <Shield className="w-6 h-6 text-primary" />

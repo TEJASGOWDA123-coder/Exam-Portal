@@ -59,19 +59,19 @@ const ExamPage = () => {
         switch (status) {
             case "active": return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
             case "completed": return "text-slate-500 bg-slate-500/10 border-slate-500/20";
-            default: return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+            default: return "text-emerald-600 bg-emerald-600/10 border-emerald-600/20";
         }
     };
 
     return (
-        <div className="max-w-6xl animate-fade-in pb-10">
+        <div className="w-full animate-fade-in pb-10 px-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Exams</h1>
                     <p className="text-muted-foreground mt-1">Manage and monitor all your examinations</p>
                 </div>
                 <Link href="/admin/create-exam">
-                    <Button className="font-semibold">
+                    <Button className="h-12 px-8 rounded-xl font-black bg-emerald-500 text-slate-950 shadow-[0_5px_15px_rgba(16,185,129,0.2)] hover:bg-emerald-400 transition-all">
                         <FilePlus className="w-4 h-4 mr-2" />
                         Create New Exam
                     </Button>
