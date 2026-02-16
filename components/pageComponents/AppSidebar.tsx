@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   BookOpen,
   MessageCircle,
+  ShieldCheck,
   Code,
   Trophy,
   FolderOpen,
@@ -18,7 +19,7 @@ import {
   FilePlus,
   ClipboardList,
   GraduationCap,
-  LayoutTemplate
+  LayoutTemplate,
 } from "lucide-react";
 
 import {
@@ -69,6 +70,12 @@ const data = {
       url: "/admin/sections",
       icon: LayoutTemplate,
       badge: null,
+    },
+    {
+      title: "SEB Config",
+      url: "/admin/seb",
+      icon: ShieldCheck,
+      badge: "Beta",
     },
     {
       title: "Manage Admins",

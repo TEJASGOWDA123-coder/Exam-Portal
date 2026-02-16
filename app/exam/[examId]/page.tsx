@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, ShieldCheck, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,15 @@ export default function ExamEntry() {
   const [email, setEmail] = useState("");
   const [className, setClassName] = useState("");
   const [section, setSection] = useState("");
+  const [isInSeb, setIsInSeb] = useState(true);
+
+  useEffect(() => {
+    if (exam?.sebConfigId) {
+      const ua = navigator.userAgent;
+      const isSeb = ua.includes("SEB") || (window as any).SafeExamBrowser;
+      setIsInSeb(!!isSeb);
+    }
+  }, [exam]);
 
   if (!exam)
     return (
@@ -159,6 +168,45 @@ export default function ExamEntry() {
             </Button>
           </form>
         </div>
+
+        {exam.sebConfigId && !isInSeb && (
+          <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-slate-900/90 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-red-500/10">
+                  <ShieldCheck className="w-5 h-5 text-red-500" />
+                </div>
+                <h3 className="font-bold text-white uppercase tracking-wider text-sm">Security Requirement</h3>
+              </div>
+              <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+                This exam is restricted to the <span className="text-white font-bold">Safe Exam Browser</span>. You cannot enter the exam using a standard browser.
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <Button 
+                  className="bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-600/20"
+                  onClick={() => {
+                    const host = window.location.host;
+                    window.location.href = `seb://${host}/api/seb/config/${examId}`;
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Launch in SEB
+                </Button>
+                <div className="flex items-center justify-between gap-4 mt-2">
+                   <a 
+                    href="https://safeexambrowser.org/download_en.html" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="flex-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+                   >
+                     <Download className="w-3 h-3" />
+                     Install SEB
+                   </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -56,8 +56,20 @@ export const exams = sqliteTable("exams", {
   sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number }[]
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
   generatedQuestions: text("generated_questions"), // JSON string for specific student variants
+  sebConfigId: text("seb_config_id"), // Reference to seb_configs.id
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+export const sebConfigs = sqliteTable("seb_configs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  configData: text("config_data").notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export type SebConfig = typeof sebConfigs.$inferSelect;
+export type NewSebConfig = typeof sebConfigs.$inferInsert;
 
 // Questions table - refactored for DSIE
 export const questions = sqliteTable("questions", {

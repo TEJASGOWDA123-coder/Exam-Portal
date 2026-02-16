@@ -13,7 +13,8 @@ import {
     Calendar,
     AlertCircle,
     BarChart2,
-    Trash2
+    Trash2,
+    ShieldCheck
 } from "lucide-react";
 import {
     AlertDialog,
@@ -38,6 +39,16 @@ const ExamPage = () => {
         const link = `${window.location.origin}/exam/${id}`;
         navigator.clipboard.writeText(link);
         toast.success("Exam link copied to clipboard!");
+    };
+
+    const copySebLink = (id: string) => {
+        // seb:// link triggers SEB browser directly
+        const host = window.location.host;
+        const link = `seb://${host}/api/seb/config/${id}`;
+        navigator.clipboard.writeText(link);
+        toast.success("SEB Launch link copied!", {
+            description: "Students can click this to open the exam directly in SEB."
+        });
     };
 
     const handleDelete = async () => {
@@ -95,9 +106,19 @@ const ExamPage = () => {
                                 <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border ${getStatusColor(exam.status)}`}>
                                     {exam.status}
                                 </span>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    {exam.totalMarks} Marks
+                                <div className="flex items-center gap-2">
+                                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        {exam.totalMarks} Marks
+                                    </div>
+                                    <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive hover:bg-destructive/10"
+                                            onClick={() => setExamToDelete({ id: exam.id, title: exam.title })}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
                                 </div>
                             </div>
 
@@ -120,29 +141,33 @@ const ExamPage = () => {
 
                             <div className="flex flex-col gap-2">
                                 <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex-1"
-                                        onClick={() => copyLink(exam.id)}
-                                    >
-                                        <LinkIcon className="w-3.5 h-3.5 mr-2" />
-                                        Share
-                                    </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={() => copyLink(exam.id)}
+                                        >
+                                            <LinkIcon className="w-3.5 h-3.5 mr-2" />
+                                            Share
+                                        </Button>
+                                        {exam.sebConfigId && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
+                                                onClick={() => copySebLink(exam.id)}
+                                            >
+                                                <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+                                                SEB Link
+                                            </Button>
+                                        )}
                                     <Link href={`/admin/add-questions/${exam.id}`} className="flex-1">
                                         <Button size="sm" className="w-full">
                                             <ExternalLink className="w-3.5 h-3.5 mr-2" />
                                             Manage
                                         </Button>
                                     </Link>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-destructive hover:bg-destructive/10"
-                                        onClick={() => setExamToDelete({ id: exam.id, title: exam.title })}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    
                                 </div>
                                 <Link href={`/admin/edit-exam/${exam.id}`}>
                                     <Button variant="outline" size="sm" className="w-full mt-2">

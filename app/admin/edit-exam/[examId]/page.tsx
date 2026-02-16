@@ -14,6 +14,7 @@ import {
     Save,
     Clock,
     Plus,
+    Upload,
     Trash2,
     Sparkles,
     ShieldCheck,
@@ -37,6 +38,9 @@ export default function EditExam() {
     const [endTime, setEndTime] = useState("");
     const [proctoringEnabled, setProctoringEnabled] = useState(false);
     const [showResults, setShowResults] = useState(true);
+    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
+    const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
+    const [uploadingSeb, setUploadingSeb] = useState(false);
     const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -51,6 +55,7 @@ export default function EditExam() {
             setEndTime(exam.endTime);
             setProctoringEnabled(!!exam.proctoringEnabled);
             setShowResults(exam.showResults !== undefined ? !!exam.showResults : true);
+            setSebConfigId(exam.sebConfigId || null);
             setSectionsConfig(exam.sectionsConfig || []);
             setLoading(false);
         } else {
@@ -66,6 +71,7 @@ export default function EditExam() {
                         setEndTime(data.endTime);
                         setProctoringEnabled(!!data.proctoringEnabled);
                         setShowResults(data.showResults !== undefined ? !!data.showResults : true);
+                        setSebConfigId(data.sebConfigId || null);
                         setSectionsConfig(data.sectionsConfig || []);
                         setLoading(false);
                     } else {
@@ -80,6 +86,60 @@ export default function EditExam() {
             fetchExam();
         }
     }, [exam, examId, router]);
+
+    useEffect(() => {
+        const fetchConfigs = async () => {
+            try {
+                const resp = await fetch("/api/admin/seb");
+                if (resp.ok) setConfigs(await resp.json());
+            } catch (err) {
+                console.error("Failed to fetch SEB configs", err);
+            }
+        };
+        fetchConfigs();
+    }, []);
+
+    const handleSebUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.name.endsWith(".seb")) {
+            toast.error("Please upload a valid .seb file");
+            return;
+        }
+
+        setUploadingSeb(true);
+        try {
+            const text = await file.text();
+            const resp = await fetch("/api/admin/seb", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: file.name.replace(".seb", ""),
+                    configData: text,
+                }),
+            });
+
+            if (resp.ok) {
+                const newConfig = await resp.json();
+                toast.success("SEB configuration uploaded and linked!");
+                // Refresh list and select the new one
+                const listResp = await fetch("/api/admin/seb");
+                if (listResp.ok) {
+                    const data = await listResp.json();
+                    setConfigs(data);
+                    setSebConfigId(newConfig.id);
+                }
+            } else {
+                const error = await resp.json();
+                throw new Error(error.error || "Upload failed");
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to upload file");
+        } finally {
+            setUploadingSeb(false);
+            e.target.value = "";
+        }
+    };
 
     // Auto-calculate end time based on start time and duration
     useEffect(() => {
@@ -118,6 +178,7 @@ export default function EditExam() {
             endTime,
             proctoringEnabled,
             showResults,
+            sebConfigId,
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
             status: exam?.status || "upcoming",
             questions: exam?.questions || [],
@@ -324,6 +385,53 @@ export default function EditExam() {
                                             <p className="text-xs text-muted-foreground">Allow students to see results immediately</p>
                                         </div>
                                         <Switch checked={showResults} onCheckedChange={setShowResults} />
+                                    </div>
+
+                                    <div className="space-y-2 pt-2 border-t border-border mt-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <ShieldCheck className="w-4 h-4 text-primary" />
+                                            <Label className="text-base font-bold">Safe Exam Browser (SEB)</Label>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <select 
+                                                value={sebConfigId || ""} 
+                                                onChange={(e) => setSebConfigId(e.target.value || null)}
+                                                className="flex-1 h-11 px-4 rounded-xl bg-muted border border-border text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all cursor-pointer"
+                                            >
+                                                <option value="">No SEB Required (Standard Browser)</option>
+                                                {configs.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="relative">
+                                                <input 
+                                                    type="file" 
+                                                    accept=".seb" 
+                                                    id="quick-seb-upload" 
+                                                    className="hidden" 
+                                                    onChange={handleSebUpload}
+                                                    disabled={uploadingSeb}
+                                                />
+                                                <Button 
+                                                    asChild 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className="h-11 w-11 rounded-xl border-dashed"
+                                                    disabled={uploadingSeb}
+                                                >
+                                                    <label htmlFor="quick-seb-upload" className="cursor-pointer">
+                                                        {uploadingSeb ? (
+                                                            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                                        ) : (
+                                                            <Upload className="w-4 h-4" />
+                                                        )}
+                                                    </label>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground ml-1">
+                                            Requires students to use the Safe Exam Browser with the selected configuration.
+                                        </p>
                                     </div>
                                 </TabsContent>
                             </Tabs>

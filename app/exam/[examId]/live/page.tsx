@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
-import { AlertTriangle, ChevronLeft, ChevronRight, Send, Lock, ShieldAlert, Timer as TimerIcon, HelpCircle, ClipboardList } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Send, Lock, ShieldAlert, ShieldCheck, Timer as TimerIcon, HelpCircle, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -39,11 +39,16 @@ export default function LiveExamPage() {
   const exam = exams.find((e) => e.id === examId);
 
   const [preCheck, setPreCheck] = useState(true);
+  const [isSeb, setIsSeb] = useState(true);
 
-  // Skip pre-check if proctoring is disabled
+  // SEB Detection
   useEffect(() => {
-    if (exam && !exam.proctoringEnabled) {
-      setPreCheck(false);
+    if (exam?.sebConfigId) {
+      const ua = navigator.userAgent;
+      const isSebBrowser = ua.includes("SEB") || (window as any).SafeExamBrowser;
+      setIsSeb(!!isSebBrowser);
+    } else {
+      setIsSeb(true);
     }
   }, [exam]);
 
@@ -84,20 +89,84 @@ export default function LiveExamPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const startTime = useMemo(() => Date.now(), []);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
 
-  const submitExam = useCallback(async (isTimeout = false) => {
-    if (submitted || isSubmitting || !exam) return;
+  // Initial fullscreen check
+  useEffect(() => {
+    const check = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+    check();
+  }, []);
+
+  // Fullscreen detection and violation
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      if (!isCurrentlyFullscreen && !submitted && !preCheck && !isSubmittingRef.current && exam?.proctoringEnabled) {
+        setViolations((v) => {
+          const next = v + 1;
+          toast.error(`⚠️ Security breach: Fullscreen exited! Violation ${next}/3`, {
+            description: "Please return to fullscreen immediately to avoid disqualification.",
+          });
+          return next;
+        });
+      }
+    };
+
+    const events = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+    events.forEach(event => document.addEventListener(event, handleFullscreenChange));
+    
+    return () => {
+      events.forEach(event => document.removeEventListener(event, handleFullscreenChange));
+    };
+  }, [submitted, preCheck, exam?.proctoringEnabled]);
+
+  const enterFullscreen = useCallback(() => {
+    const el = document.documentElement as any;
+    const requestMethod = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+
+    if (requestMethod) {
+      requestMethod.call(el).catch((err: any) => {
+        console.error("Fullscreen error:", err);
+        toast.error("Failed to enter fullscreen. Please enable it in browser settings.");
+      });
+    }
+  }, []);
+
+  const submitExam = useCallback(async (isTimeout = false, finalViolations?: number) => {
+    if (submitted || isSubmittingRef.current || !exam) return;
 
     if (!student) {
       toast.error("Session Error: Student identity missing. Please refresh the page.");
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setSubmitted(true);
 
+    console.log("Exam submission triggered", { isTimeout, finalViolations, currentViolations: violations });
+
     const actualViolations = finalViolations !== undefined ? finalViolations : violations;
+    const isProctored = !!exam.proctoringEnabled;
 
     if (isTimeout) {
       toast.info("Time is up! Your exam is being submitted automatically.", {
@@ -164,9 +233,9 @@ export default function LiveExamPage() {
     } as any);
 
     if (!success) {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
       setSubmitted(false);
-      toast.error("Submission Failed. Please try again or contact invigilator.");
       return;
     }
 
@@ -198,16 +267,22 @@ export default function LiveExamPage() {
   ]);
 
   const handleAIViolation = useCallback((reason: string, points: number) => {
-    if (submitted) return;
+    if (submitted || isSubmittingRef.current) return;
     setViolations((v) => {
       const next = v + 1;
       toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/3`, {
         description: "Please maintain proper exam conduct.",
       });
-      if (next >= 3) submitExam(false, next);
       return next;
     });
-  }, [submitted, submitExam]);
+  }, [submitted]);
+
+  // Handle violation limit
+  useEffect(() => {
+    if (violations >= 3 && !submitted && !isSubmitting) {
+      submitExam(false, violations);
+    }
+  }, [violations, submitted, isSubmitting, submitExam]);
 
   // Check for existing submission on mount
   useEffect(() => {
@@ -233,11 +308,11 @@ export default function LiveExamPage() {
   // Proctoring: tab visibility
   useEffect(() => {
     const handler = () => {
-      if (document.hidden && !submitted && !preCheck) {
+      // Tab switching counts as a violation for ALL exams if they are in live mode
+      if (document.hidden && !submitted && !preCheck && !isSubmittingRef.current) {
         setViolations((v) => {
           const next = v + 1;
           toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
-          if (next >= 3) submitExam(false, next);
           return next;
         });
       }
@@ -268,16 +343,15 @@ export default function LiveExamPage() {
     };
   }, []);
 
-  // Fullscreen only when exam starts
+  // Cleanup stream and fullscreen on unmount
   useEffect(() => {
-    if (!preCheck) {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => { });
-      return () => {
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
-      };
-    }
-  }, [preCheck]);
+    return () => {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+      if (activeStream) {
+        activeStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [activeStream]);
 
   const sectionGroups = useMemo(() => {
     const groups: Record<string, { startIndex: number; count: number; questions: any[] }> = {};
@@ -307,7 +381,17 @@ export default function LiveExamPage() {
   }
 
   if (preCheck) {
-    return <PreExamCheck examTitle={exam.title} onProceed={() => setPreCheck(false)} />;
+    return (
+      <PreExamCheck 
+        examTitle={exam.title} 
+        proctoringEnabled={!!exam.proctoringEnabled}
+        onProceed={(stream: MediaStream | null) => {
+          if (stream) setActiveStream(stream);
+          enterFullscreen();
+          setPreCheck(false);
+        }} 
+      />
+    );
   }
 
   const question = shuffledQuestions[currentQ];
@@ -379,7 +463,7 @@ export default function LiveExamPage() {
 
       <main className="flex-1 max-w-[1600px] mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         <div className="lg:col-span-8 flex flex-col h-full gap-6">
-          <section className="bg-background rounded-3xl border border-border shadow-card flex-1 flex flex-col overflow-hidden">
+          <section className="bg-background rounded-3xl border border-border shadow-card flex-1 flex flex-col overflow-hidden relative">
             <div className="px-8 py-4 bg-muted/30 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ClipboardList className="w-4 h-4 text-primary" />
@@ -408,6 +492,62 @@ export default function LiveExamPage() {
                   }
                 }}
               />
+
+              {/* Fullscreen Recovery Overlay */}
+              {!isFullscreen && !preCheck && !submitted && (
+                <div className="absolute inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300">
+                  <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+                    <ShieldAlert className="w-10 h-10 text-red-600 animate-pulse" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">FULLSCREEN REQUIRED</h2>
+                  <p className="text-muted-foreground mb-8 max-w-md">
+                    To maintain exam integrity, you must remain in fullscreen mode. Continuing outside fullscreen will result in multiple violations.
+                  </p>
+                  <Button 
+                    size="lg" 
+                    onClick={enterFullscreen}
+                    className="rounded-2xl px-10 font-bold bg-primary hover:scale-105 transition-transform shadow-xl shadow-primary/20"
+                  >
+                    Re-enter Fullscreen
+                  </Button>
+                </div>
+              )}
+
+              {/* SEB Lock Overlay */}
+              {!isSeb && !submitted && (
+                <div className="absolute inset-0 z-[110] bg-slate-950 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+                  <div className="w-24 h-24 rounded-3xl bg-red-500/10 flex items-center justify-center mb-8 border border-red-500/20">
+                    <Lock className="w-12 h-12 text-red-500" />
+                  </div>
+                  <h2 className="text-4xl font-black text-white mb-4 font-title">Locked: SEB Required</h2>
+                  <p className="text-slate-400 max-w-md mb-10 text-lg font-medium leading-relaxed">
+                    This exam is protected by the <span className="text-white font-bold underline decoration-red-500/50 underline-offset-4">Safe Exam Browser</span>. 
+                    Your current browser does not meet security requirements.
+                  </p>
+                  <div className="flex flex-col gap-4 w-full max-w-xs">
+                    <Button 
+                      variant="outline" 
+                      className="h-14 border-slate-800 text-slate-300 hover:bg-slate-900 rounded-2xl font-bold"
+                      onClick={() => window.location.reload()}
+                    >
+                      Verify Connection
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="text-slate-500 hover:text-slate-300 font-bold"
+                      onClick={() => router.push("/admin/dashboard")}
+                    >
+                      Return to Dashboard
+                    </Button>
+                  </div>
+                  <div className="mt-16 flex items-center gap-2 text-slate-700 bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800/50">
+                    <ShieldCheck className="w-3 h-3" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                      Security Protocol Active
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Primary Navigation Buttons - Inside Card for Flow */}
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
@@ -447,18 +587,27 @@ export default function LiveExamPage() {
         <div className="lg:col-span-4 h-full flex flex-col gap-6">
           {exam.proctoringEnabled && (
             <div className="bg-background rounded-3xl border border-border shadow-card overflow-hidden">
-              <AIProctor onViolation={handleAIViolation} isFinished={submitted} />
+              <AIProctor 
+                onViolation={handleAIViolation} 
+                isFinished={submitted} 
+                existingStream={activeStream} 
+              />
             </div>
           )}
 
           <div className="bg-background rounded-3xl border border-border shadow-card p-6">
             <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-primary" /> Guidelines
+              <HelpCircle className="w-4 h-4 text-primary" /> Integrity Guidelines
             </h4>
             <div className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-xl text-[11px] text-muted-foreground">
-                Maintain focus on the exam window. Tab switching is monitored and reported.
+              <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-[11px] text-red-600 font-bold">
+                MANDATORY FULLSCREEN: Any attempt to exit fullscreen or switch tabs will be recorded as a violation.
               </div>
+              {exam.proctoringEnabled && (
+                <div className="p-3 bg-muted/50 rounded-xl text-[11px] text-muted-foreground">
+                  Maintain proper posture. AI monitor will report suspicious movement or noise.
+                </div>
+              )}
             </div>
           </div>
         </div>

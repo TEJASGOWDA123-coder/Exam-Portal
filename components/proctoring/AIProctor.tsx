@@ -6,9 +6,10 @@ import { AlertTriangle } from "lucide-react";
 interface AIProctorProps {
   onViolation: (reason: string, points: number) => void;
   isFinished?: boolean;
+  existingStream?: MediaStream | null;
 }
 
-function AIProctor({ onViolation, isFinished }: AIProctorProps) {
+function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
@@ -62,57 +63,66 @@ function AIProctor({ onViolation, isFinished }: AIProctorProps) {
       });
 
     const initialize = async () => {
-      await loadScript(
+      // Use existing stream if available, otherwise request new one
+      const streamPromise = existingStream 
+        ? Promise.resolve(existingStream)
+        : navigator.mediaDevices.getUserMedia({
+            video: {
+              width: 640,
+              height: 480,
+              frameRate: { ideal: 15, max: 20 },
+            },
+            audio: true,
+          });
+
+      const scriptPromise = loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
       );
 
-      // @ts-ignore
-      if (window.FaceMesh) {
-        // @ts-ignore
-        faceMesh = new window.FaceMesh({
-          locateFile: (file: string) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-        });
-
-        faceMesh.setOptions({
-          maxNumFaces: 1,
-          refineLandmarks: false,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6,
-        });
-
-        faceMesh.onResults((results: any) => {
-          if (isClosed) return;
-
-          if (!results.multiFaceLandmarks?.length) {
-            addRisk(25, "Face not detected");
-            return;
-          }
-
-          const landmarks = results.multiFaceLandmarks[0];
-          detectLipMovement(landmarks);
-          detectHeadTurn(landmarks);
-        });
-
-        await new Promise((r) => setTimeout(r, 500));
-        isInitialized = true;
-      }
-
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: 640,
-            height: 480,
-            frameRate: { ideal: 15, max: 20 },
-          },
-          audio: true,
-        });
+        // Wait for both to be ready
+        const [userStream] = await Promise.all([streamPromise, scriptPromise]);
+        stream = userStream;
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
 
+        // Initialize FaceMesh after script is loaded
+        // @ts-ignore
+        if (window.FaceMesh) {
+          // @ts-ignore
+          faceMesh = new window.FaceMesh({
+            locateFile: (file: string) =>
+              `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+          });
+
+          faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: false,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6,
+          });
+
+          faceMesh.onResults((results: any) => {
+            if (isClosed) return;
+
+            if (!results.multiFaceLandmarks?.length) {
+              addRisk(25, "Face not detected");
+              return;
+            }
+
+            const landmarks = results.multiFaceLandmarks[0];
+            detectLipMovement(landmarks);
+            detectHeadTurn(landmarks);
+          });
+
+          // Model is ready immediately after setOptions and first send
+          isInitialized = true;
+        }
+
+        // Setup Audio analysis
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();

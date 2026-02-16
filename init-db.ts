@@ -50,6 +50,8 @@ async function init() {
                 generated_questions TEXT,
                 status TEXT NOT NULL DEFAULT 'upcoming',
                 proctoring_enabled INTEGER NOT NULL DEFAULT 0,
+                show_results INTEGER NOT NULL DEFAULT 1,
+                seb_config_id TEXT,
                 created_by TEXT NOT NULL REFERENCES users(id),
                 created_at INTEGER NOT NULL
             )
@@ -60,6 +62,23 @@ async function init() {
         try { await turso.execute("ALTER TABLE exams ADD COLUMN blueprint TEXT"); } catch(e) {}
         try { await turso.execute("ALTER TABLE exams ADD COLUMN generated_questions TEXT"); } catch(e) {}
         try { await turso.execute("ALTER TABLE exams ADD COLUMN sections_config TEXT"); } catch(e) {}
+        try { await turso.execute("ALTER TABLE exams ADD COLUMN show_results INTEGER NOT NULL DEFAULT 1"); } catch(e) {}
+        try { await turso.execute("ALTER TABLE exams ADD COLUMN seb_config_id TEXT"); } catch(e) {}
+
+        // Create students table
+        await turso.execute(`
+            CREATE TABLE IF NOT EXISTS students (
+                id TEXT PRIMARY KEY,
+                exam_id TEXT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                usn TEXT NOT NULL,
+                class TEXT NOT NULL,
+                section TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+        `);
+        console.log("Students table OK");
 
         // Create questions table
         await turso.execute(`
@@ -105,9 +124,29 @@ async function init() {
                 class TEXT NOT NULL,
                 section TEXT NOT NULL,
                 score INTEGER NOT NULL,
+                violations INTEGER NOT NULL DEFAULT 0,
+                section_scores TEXT,
+                justifications TEXT,
                 submitted_at INTEGER NOT NULL
             )
         `);
+        // Add new columns if table already existed
+        try { await turso.execute("ALTER TABLE submissions ADD COLUMN violations INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+        try { await turso.execute("ALTER TABLE submissions ADD COLUMN section_scores TEXT"); } catch(e) {}
+        try { await turso.execute("ALTER TABLE submissions ADD COLUMN justifications TEXT"); } catch(e) {}
+
+        // Create seb_configs table
+        await turso.execute(`
+            CREATE TABLE IF NOT EXISTS seb_configs (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                config_data TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+        `);
+        console.log("SEB Configs table OK");
+
         await turso.execute(`
             CREATE UNIQUE INDEX IF NOT EXISTS exam_usn_unique ON submissions(exam_id, usn)
         `);

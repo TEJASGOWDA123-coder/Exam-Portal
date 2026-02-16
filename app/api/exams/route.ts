@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, questions: examQuestions, blueprint } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, sebConfigId, questions: examQuestions, blueprint } = data;
 
 
 
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
                 status,
                 proctoringEnabled: proctoringEnabled ? 1 : 0,
                 showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
+                sebConfigId: sebConfigId || null,
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
                 blueprint: blueprint ? JSON.stringify(blueprint) : null
             };

@@ -64,17 +64,38 @@ export default function ViewResults() {
    };
 
    const handleReschedule = async (id: string, name: string) => {
-      if (!confirm(`Confirm reset for ${name}? This action is irreversible.`)) {
+      if (!confirm(`Confirm reschedule for ${name}? This will clear their current result and allow them to retake the exam. This action is irreversible.`)) {
          return;
       }
 
       try {
          const res = await fetch(`/api/results/${id}`, { method: "DELETE" });
          if (!res.ok) throw new Error("Failed to delete result");
-         toast.success(`${name} reset successfully`);
+         toast.success(`${name} rescheduled successfully`);
          fetchResults();
       } catch (error) {
          toast.error("Operation failed");
+      }
+   };
+
+   const handleRescheduleAll = async () => {
+      const confirmation = prompt(`Type "RESCHEDULE" to confirm resetting ALL results for "${currentExam?.title}". This will allow all students to re-take the exam. This action is IRREVERSIBLE.`);
+      
+      if (confirmation !== "RESCHEDULE") {
+         if (confirmation !== null) toast.error("Incorrect confirmation text");
+         return;
+      }
+
+      setIsRefreshing(true);
+      try {
+         const res = await fetch(`/api/results?examId=${examId}`, { method: "DELETE" });
+         if (!res.ok) throw new Error("Failed to reset results");
+         toast.success("Exam has been rescheduled for all candidates");
+         await fetchResults();
+      } catch (error) {
+         toast.error("Bulk reschedule failed");
+      } finally {
+         setIsRefreshing(false);
       }
    };
 
@@ -171,9 +192,13 @@ export default function ViewResults() {
                      Back to Dashboard
                   </Link>
                </Button>
-               <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="font-bold">
+                <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="font-bold">
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   Sync
+               </Button>
+               <Button onClick={handleRescheduleAll} variant="destructive" disabled={isRefreshing || filtered.length === 0} className="font-bold shadow-lg shadow-destructive/20 border-red-500/50">
+                  <CalendarX className="w-4 h-4 mr-2" />
+                  Reschedule All
                </Button>
                <Button onClick={downloadExcel} className="bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20">
                   <Download className="w-4 h-4 mr-2" />
@@ -305,9 +330,9 @@ export default function ViewResults() {
                                        variant="ghost"
                                        size="sm"
                                        onClick={() => handleReschedule(r.id, r.studentName)}
-                                       className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                       className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 px-3"
                                     >
-                                       <Trash2 className="w-4 h-4" />
+                                       <CalendarX className="w-3.5 h-3.5 mr-2" /> Reschedule
                                     </Button>
                                  </td>
                               </tr>
@@ -319,9 +344,16 @@ export default function ViewResults() {
             </div>
          </div>
 
-         {/* Details Modal */}
+          {/* Details Modal */}
          <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-0 border-border shadow-2xl bg-card">
+               <DialogHeader className="sr-only">
+                  <DialogTitle>{selectedSubmission?.studentName || "Candidate"} - Assessment Report</DialogTitle>
+                  <DialogDescription>
+                     Detailed performance review for USN {selectedSubmission?.usn}
+                  </DialogDescription>
+               </DialogHeader>
+
                <div className="p-6 border-b border-border bg-muted/10">
                   <div className="flex items-center justify-between">
                      <div className="flex items-center gap-4">
@@ -329,7 +361,7 @@ export default function ViewResults() {
                            {selectedSubmission?.studentName.charAt(0)}
                         </div>
                         <div>
-                           <h2 className="text-xl font-bold text-foreground">{selectedSubmission?.studentName}</h2>
+                           <h2 className="text-xl font-bold text-foreground leading-tight">{selectedSubmission?.studentName}</h2>
                            <p className="text-sm font-medium text-muted-foreground">{selectedSubmission?.usn} • Detailed Report</p>
                         </div>
                      </div>

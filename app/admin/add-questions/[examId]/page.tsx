@@ -30,12 +30,35 @@ import {
   Brain,
   ChevronDown,
   FilePlus,
-  HelpCircle
+  HelpCircle,
+  Hash,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 import { Question, useExam } from "@/hooks/contexts/ExamContext";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 
 const indexToLetter = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -89,10 +112,45 @@ export default function AddQuestions() {
       setConfigSectionId(sec.id);
       setConfigData({
         name: sec.name,
-        identityPrompt: sec.identityPrompt,
-        transformationPrompt: sec.transformationPrompt,
+        identityPrompt: sec.identityPrompt || "",
+        transformationPrompt: sec.transformationPrompt || "",
         validationRules: rules
       });
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!configSectionId || !configData.name) return;
+    setSaving(true);
+    try {
+      let rules = configData.validationRules;
+      try {
+        JSON.parse(rules);
+      } catch (e) {
+        toast.error("Invalid JSON in validation rules");
+        return;
+      }
+
+      const resp = await fetch("/api/sections", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: configSectionId,
+          ...configData
+        })
+      });
+
+      if (resp.ok) {
+        toast.success("Section configuration updated!");
+        fetchSections();
+        setConfigSectionId(null);
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err) {
+      toast.error("Failed to update section");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -213,6 +271,15 @@ export default function AddQuestions() {
       marks: parseInt(qMarks) || 1,
       requiresJustification: requiresJustification,
     };
+
+    // Auto-register section in architecture if missing
+    if (qSection && qSection !== "General" && qSection !== "NEW") {
+      if (!localSectionsConfig.find(s => s.name === qSection)) {
+        setLocalSectionsConfig(prev => [...prev, { name: qSection, pickCount: 5 }]);
+        toast.info(`Added "${qSection}" to exam architecture`);
+      }
+    }
+
     if (editingId) {
       setQuestions((prev) => prev.map((q) => (q.id === editingId ? newQ : q)));
       setEditingId(null);
@@ -378,6 +445,7 @@ export default function AddQuestions() {
   ]));
 
   return (
+    <>
     <div className="w-full animate-fade-in pb-10 px-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
@@ -431,17 +499,17 @@ export default function AddQuestions() {
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-muted-foreground uppercase">Target Section</Label>
-                  <div className="relative">
-                    <select
-                      value={qSection}
-                      onChange={(e) => setQSection(e.target.value)}
-                      className="w-full h-11 bg-background border border-input rounded-xl px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
-                    >
-                      {currentSections.map(s => <option key={s} value={s}>{s}</option>)}
-                      <option value="NEW">+ New Section</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
+                  <Select value={qSection} onValueChange={(val) => setQSection(val)}>
+                    <SelectTrigger className="w-full h-11 bg-background border-input rounded-xl px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all">
+                      <SelectValue placeholder="Select Section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentSections.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                      <SelectItem value="NEW">+ New Section</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-muted-foreground uppercase">Points</Label>
@@ -678,38 +746,40 @@ export default function AddQuestions() {
 
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground pl-1">Target Context</Label>
-                  <div className="relative">
-                    <select
-                      value={aiSection}
-                      onChange={(e) => setAiSection(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-primary/20"
-                    >
-                      <option value="Smart Auto-Classify">Smart Auto-Classify</option>
-                      {currentSections.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-50" />
-                  </div>
+                  <Select value={aiSection} onValueChange={(val) => setAiSection(val)}>
+                    <SelectTrigger className="w-full h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold focus:ring-2 focus:ring-primary/20">
+                      <SelectValue placeholder="Select Section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Smart Auto-Classify">Smart Auto-Classify</SelectItem>
+                      {currentSections.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <select
-                    value={aiCount}
-                    onChange={(e) => setAiCount(e.target.value)}
-                    className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold"
-                  >
-                    <option value="5">5 Qs</option>
-                    <option value="10">10 Qs</option>
-                    <option value="20">20 Qs</option>
-                  </select>
-                  <select
-                    value={aiDifficulty}
-                    onChange={(e) => setAiDifficulty(e.target.value)}
-                    className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold"
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
+                  <Select value={aiCount} onValueChange={(val) => setAiCount(val)}>
+                    <SelectTrigger className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold">
+                      <SelectValue placeholder="Count" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 Qs</SelectItem>
+                      <SelectItem value="10">10 Qs</SelectItem>
+                      <SelectItem value="20">20 Qs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={aiDifficulty} onValueChange={(val) => setAiDifficulty(val)}>
+                    <SelectTrigger className="h-10 rounded-xl border border-input bg-background/80 px-3 text-xs font-bold">
+                      <SelectValue placeholder="Difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button className="w-full font-bold shadow-lg shadow-primary/10" onClick={handleAiGenerate} disabled={aiGenerating}>
                   {aiGenerating ? <Sparkles className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
@@ -805,10 +875,84 @@ export default function AddQuestions() {
                 </div>
               </div>
               <div className="pt-2">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Sections ({localSectionsConfig.length})</h4>
-                <div className="flex flex-wrap gap-2">
-                  {currentSections.map(s => (
-                    <span key={s} className="px-2 py-1 rounded-md bg-muted text-[10px] font-bold uppercase">{s}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase">Section Architecture</h4>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Section
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => {
+                        const name = prompt("Enter custom section name:");
+                        if (name && !localSectionsConfig.find(s => s.name === name)) {
+                          setLocalSectionsConfig([...localSectionsConfig, { name, pickCount: 5 }]);
+                        }
+                      }}>
+                        <Plus className="w-4 h-4 mr-2" /> Custom Section
+                      </DropdownMenuItem>
+                      {availableSections.length > 0 && <div className="h-px bg-border my-1" />}
+                      {availableSections.map(s => (
+                        <DropdownMenuItem
+                          key={s.id}
+                          disabled={!!localSectionsConfig.find(ls => ls.name === s.name)}
+                          onClick={() => setLocalSectionsConfig([...localSectionsConfig, { name: s.name, pickCount: 5 }])}
+                        >
+                          <LayoutGrid className="w-4 h-4 mr-2 text-primary" />
+                          {s.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="space-y-3">
+                  {localSectionsConfig.length === 0 && (
+                    <div className="text-[10px] text-muted-foreground italic p-3 border border-dashed rounded-xl text-center">
+                      No section architecture defined. All questions will be shown.
+                    </div>
+                  )}
+                  {localSectionsConfig.map((config, idx) => (
+                    <div key={idx} className="flex flex-col gap-2 p-3 rounded-xl bg-muted/30 border border-border group relative">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold truncate max-w-[100px]">{config.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          {/* Configure Button if template exists */}
+                          {availableSections.find(s => s.name === config.name) && (
+                            <button
+                              onClick={() => openConfig(availableSections.find(s => s.name === config.name).id)}
+                              className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Configure Section Identity"
+                            >
+                              <Settings className="w-3 h-3" />
+                            </button>
+                          )}
+                          <div className="flex items-center bg-background rounded-lg border border-border px-1.5">
+                            <span className="text-[9px] font-bold text-muted-foreground mr-1">PICK</span>
+                            <input
+                              type="number"
+                              value={config.pickCount}
+                              onChange={(e) => {
+                                const next = [...localSectionsConfig];
+                                next[idx].pickCount = parseInt(e.target.value) || 0;
+                                setLocalSectionsConfig(next);
+                              }}
+                              className="w-8 h-6 bg-transparent text-[11px] font-bold text-center focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            onClick={() => setLocalSectionsConfig(localSectionsConfig.filter((_, i) => i !== idx))}
+                            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -817,5 +961,50 @@ export default function AddQuestions() {
         </div>
       </div>
     </div>
+
+    {/* Section Configuration Dialog */}
+    <Dialog open={configSectionId !== null} onOpenChange={(open) => !open && setConfigSectionId(null)}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Configure Section: {configData.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider">Identity Prompt</Label>
+            <Textarea
+              className="min-h-[120px] text-sm"
+              value={configData.identityPrompt}
+              onChange={(e) => setConfigData({ ...configData, identityPrompt: e.target.value })}
+              placeholder="Who is the AI for this section?"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider">Transformation Prompt</Label>
+            <Textarea
+              className="min-h-[120px] text-sm"
+              value={configData.transformationPrompt}
+              onChange={(e) => setConfigData({ ...configData, transformationPrompt: e.target.value })}
+              placeholder="How should the AI process student responses?"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider">Validation Rules (JSON)</Label>
+            <Textarea
+              className="min-h-[100px] font-mono text-xs"
+              value={configData.validationRules}
+              onChange={(e) => setConfigData({ ...configData, validationRules: e.target.value })}
+              placeholder='{ "key": "value" }'
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setConfigSectionId(null)}>Cancel</Button>
+          <Button onClick={handleSaveConfig} disabled={saving}>
+            {saving ? "Saving..." : "Save Template Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

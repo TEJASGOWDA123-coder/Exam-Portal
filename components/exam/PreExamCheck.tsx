@@ -7,11 +7,12 @@ import { CheckCircle2, XCircle, Camera, Mic, Signal, ShieldCheck, ArrowRight } f
 import { toast } from "sonner";
 
 interface PreExamCheckProps {
-  onProceed: () => void;
+  onProceed: (stream: MediaStream | null) => void;
   examTitle: string;
+  proctoringEnabled?: boolean;
 }
 
-export default function PreExamCheck({ onProceed, examTitle }: PreExamCheckProps) {
+export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled = true }: PreExamCheckProps) {
   const [checks, setChecks] = useState({
     camera: false,
     mic: false,
@@ -29,9 +30,8 @@ export default function PreExamCheck({ onProceed, examTitle }: PreExamCheckProps
   useEffect(() => {
     checkMedia();
     checkNetwork();
-    return () => {
-      stream?.getTracks().forEach(t => t.stop());
-    };
+    // We don't stop tracks here anymore because we pass the stream to the parent
+    // The parent (LiveExamPage) will handle cleanup on final unmount
   }, []);
 
   const checkMedia = async () => {
@@ -80,56 +80,65 @@ export default function PreExamCheck({ onProceed, examTitle }: PreExamCheckProps
             </CardHeader>
 
             <div className="space-y-4">
-              <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.camera ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Camera className="w-4 h-4" />
+              {proctoringEnabled ? (
+                <>
+                  <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.camera ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Camera className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">Camera</p>
+                        <p className="text-[10px] text-muted-foreground">{loading.camera ? "Checking..." : (checks.camera ? "Ready" : "Not Found")}</p>
+                      </div>
+                    </div>
+                    {loading.camera ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.camera ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">Camera</p>
-                    <p className="text-[10px] text-muted-foreground">{loading.camera ? "Checking..." : (checks.camera ? "Ready" : "Not Found")}</p>
-                  </div>
-                </div>
-                {loading.camera ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.camera ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
-              </div>
 
-              <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.mic ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Mic className="w-4 h-4" />
+                  <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.mic ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Mic className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">Microphone</p>
+                        <p className="text-[10px] text-muted-foreground">{loading.mic ? "Checking..." : (checks.mic ? "Ready" : "Not Found")}</p>
+                      </div>
+                    </div>
+                    {loading.mic ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.mic ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">Microphone</p>
-                    <p className="text-[10px] text-muted-foreground">{loading.mic ? "Checking..." : (checks.mic ? "Ready" : "Not Found")}</p>
-                  </div>
-                </div>
-                {loading.mic ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.mic ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
-              </div>
 
-              <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.network ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Signal className="w-4 h-4" />
+                  <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.network ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Signal className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">Network Speed</p>
+                        <p className="text-[10px] text-muted-foreground">{loading.network ? "Checking..." : (latency ? `${latency}ms latency` : "Poor connection")}</p>
+                      </div>
+                    </div>
+                    {loading.network ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.network ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">Network Speed</p>
-                    <p className="text-[10px] text-muted-foreground">{loading.network ? "Checking..." : (latency ? `${latency}ms latency` : "Poor connection")}</p>
-                  </div>
+                </>
+              ) : (
+                <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 text-center">
+                  <p className="text-sm font-medium text-foreground mb-1">Standard integrity mode</p>
+                  <p className="text-[11px] text-muted-foreground">This exam will be recorded in fullscreen. Exiting fullscreen will be recorded as a violation.</p>
                 </div>
-                {loading.network ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.network ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
-              </div>
+              )}
             </div>
 
             <Button 
               className="w-full h-12 mt-8 font-bold text-md group" 
-              disabled={!allPassed}
-              onClick={onProceed}
+              disabled={proctoringEnabled && !allPassed}
+              onClick={() => onProceed(stream)}
             >
-              Proceed to Exam
+              Start Exam
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
 
-            {!allPassed && !loading.camera && !loading.mic && !loading.network && (
+            {proctoringEnabled && !allPassed && !loading.camera && !loading.mic && !loading.network && (
               <p className="text-[10px] text-center text-destructive mt-4 font-medium italic">
                 Please resolve all issues to start the test.
               </p>
@@ -137,15 +146,22 @@ export default function PreExamCheck({ onProceed, examTitle }: PreExamCheckProps
           </div>
 
           <div className="bg-muted p-8 flex flex-col items-center justify-center text-center">
-            <div className="w-full aspect-video bg-black rounded-2xl border-4 border-background shadow-lg overflow-hidden relative mb-6">
-              <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover mirror" />
-              <div className="absolute top-4 left-4 flex gap-2">
-                <div className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] text-white flex items-center gap-1.5 font-bold">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  PREVIEW
+            {proctoringEnabled ? (
+              <div className="w-full aspect-video bg-black rounded-2xl border-4 border-background shadow-lg overflow-hidden relative mb-6">
+                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover mirror" />
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <div className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] text-white flex items-center gap-1.5 font-bold">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    PREVIEW
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="w-full aspect-video bg-muted-foreground/10 rounded-2xl border-4 border-dashed border-muted-foreground/20 flex flex-col items-center justify-center mb-6">
+                <ShieldCheck className="w-12 h-12 text-muted-foreground/30 mb-2" />
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Device Check Skipped</p>
+              </div>
+            )}
             <div className="max-w-xs">
               <h4 className="font-bold text-sm mb-2">Instructions</h4>
               <ul className="text-[11px] text-muted-foreground space-y-2 text-left list-disc pl-4">

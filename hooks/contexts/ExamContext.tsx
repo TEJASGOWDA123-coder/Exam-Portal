@@ -7,6 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
 export interface Question {
@@ -32,6 +33,7 @@ export interface Exam {
   status: "active" | "upcoming" | "completed";
   proctoringEnabled?: boolean | number;
   showResults?: boolean | number;
+  sebConfigId?: string | null;
   sectionsConfig?: { name: string; pickCount: number }[];
   questions: Question[];
 }
@@ -217,8 +219,14 @@ export function ExamProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-      const errData = await resp.json().catch(() => ({ error: "Unknown API error" }));
+      const errData = await resp.json().catch(async () => {
+        const text = await resp.text();
+        return { error: text || "Unknown API error" };
+      });
+      
       console.error("Failed to add result:", errData);
+      const errorMsg = errData.error || "Submission Failed";
+      toast.error(errorMsg);
       return false;
     } catch (err) {
       console.error("Failed to add result (Network/Client):", err);
