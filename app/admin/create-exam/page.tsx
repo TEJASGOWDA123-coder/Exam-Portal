@@ -5,275 +5,255 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger  } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Exam, useExam } from "@/hooks/contexts/ExamContext";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { 
-  Plus, 
-  Trash2, 
-  ArrowLeft,
-  ChevronRight,
-  Sparkles,
-  Clock,
-  ShieldCheck,
-  BarChart2,
-  Lock,
-  Copy,
-  Check,
-  ClipboardPaste
+import {
+   Plus,
+   Trash2,
+   ArrowLeft,
+   ChevronRight,
+   Sparkles,
+   Clock,
+   ShieldCheck,
+   BarChart2,
+   Lock,
+   Copy,
+   Check,
+   ClipboardPaste,
+   FilePlus,
+   Calendar,
+   Save
 } from "lucide-react";
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function CreateExam() {
-  const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState("");
-  const [totalMarks, setTotalMarks] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [proctoringEnabled, setProctoringEnabled] = useState(false);
-  const [showResults, setShowResults] = useState(true);
-  const { addExam } = useExam();
-  const router = useRouter();
-  const { data: session } = useSession();
+   const [title, setTitle] = useState("");
+   const [duration, setDuration] = useState("");
+   const [totalMarks, setTotalMarks] = useState("");
+   const [startTime, setStartTime] = useState("");
+   const [endTime, setEndTime] = useState("");
+   const [proctoringEnabled, setProctoringEnabled] = useState(false);
+   const [showResults, setShowResults] = useState(true);
+   const { addExam } = useExam();
+   const router = useRouter();
+   const { data: session } = useSession();
 
-  // Auto-calculate end time based on start time and duration
-  // ... (keeping useEffect)
-  useEffect(() => {
-    if (startTime && duration) {
-      const start = new Date(startTime);
-      const durationMinutes = parseInt(duration);
-      if (!isNaN(durationMinutes) && durationMinutes > 0) {
-        const end = new Date(start.getTime() + durationMinutes * 60000);
-        const year = end.getFullYear();
-        const month = String(end.getMonth() + 1).padStart(2, '0');
-        const day = String(end.getDate()).padStart(2, '0');
-        const hours = String(end.getHours()).padStart(2, '0');
-        const minutes = String(end.getMinutes()).padStart(2, '0');
-        const endTimeString = `${year}-${month}-${day}T${hours}:${minutes}`;
-        setEndTime(endTimeString);
+   // Auto-calculate end time based on start time and duration
+   useEffect(() => {
+      if (startTime && duration) {
+         const start = new Date(startTime);
+         const durationMinutes = parseInt(duration);
+         if (!isNaN(durationMinutes) && durationMinutes > 0) {
+            const end = new Date(start.getTime() + durationMinutes * 60000);
+            const year = end.getFullYear();
+            const month = String(end.getMonth() + 1).padStart(2, '0');
+            const day = String(end.getDate()).padStart(2, '0');
+            const hours = String(end.getHours()).padStart(2, '0');
+            const minutes = String(end.getMinutes()).padStart(2, '0');
+            const endTimeString = `${year}-${month}-${day}T${hours}:${minutes}`;
+            setEndTime(endTimeString);
+         }
       }
-    }
-  }, [startTime, duration]);
+   }, [startTime, duration]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !duration || !totalMarks || !startTime) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    const id = `exam-${Date.now()}`;
-     const exam: Exam = {
-      id,
-      title: title.trim(),
-      duration: parseInt(duration),
-      totalMarks: parseInt(totalMarks),
-      startTime,
-      endTime,
-      status: "upcoming",
-      proctoringEnabled,
-      showResults,
-      questions: [],
-    };
-    try {
-      const success = await addExam(exam);
-      if (success) {
-        toast.success("Exam Created! Now add questions.");
-        router.push(`/admin/add-questions/${id}`);
+   const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!title.trim() || !duration || !totalMarks || !startTime) {
+         toast.error("Please fill all required fields");
+         return;
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create exam");
-    }
-  };
+      const id = `exam-${Date.now()}`;
+      const exam: Exam = {
+         id,
+         title: title.trim(),
+         duration: parseInt(duration),
+         totalMarks: parseInt(totalMarks),
+         startTime,
+         endTime,
+         status: "upcoming",
+         proctoringEnabled,
+         showResults,
+         questions: [],
+      };
+      try {
+         const success = await addExam(exam);
+         if (success) {
+            toast.success("Exam Created! Now add questions.");
+            router.push(`/admin/add-questions/${id}`);
+         }
+      } catch (error: any) {
+         toast.error(error.message || "Failed to create exam");
+      }
+   };
 
-  return (
-    <div className="w-full py-10 px-4 animate-fade-in">
-      <div className="mb-12">
-         <div className="flex items-center gap-4 mb-6">
-            <Link href="/admin/dashboard" className="p-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200 dark:border-slate-800">
-               <ArrowLeft className="w-5 h-5 text-slate-500" />
-            </Link>
-            <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Creation Terminal</span>
-                <div className="flex items-center gap-2 mt-1">
-                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Architect New Assessment Matrix</p>
-                </div>
+   return (
+      <div className="w-full animate-fade-in pb-10 px-4">
+         {/* Header */}
+         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-bold">
+                  <FilePlus className="w-6 h-6 text-primary" />
+               </div>
+               <div>
+                  <h1 className="text-3xl font-bold text-foreground font-title">Create Exam</h1>
+                  <p className="text-muted-foreground mt-1 text-sm font-medium">Configure a new examination</p>
+               </div>
+            </div>
+            <Button variant="ghost" asChild className="font-bold">
+               <Link href="/admin/dashboard">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Dashboard
+               </Link>
+            </Button>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+               <form onSubmit={handleSubmit}>
+                  <Card className="p-6 rounded-2xl shadow-card border border-border bg-card">
+                     <Tabs defaultValue="details" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
+                           <TabsTrigger value="details" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Exam Details</TabsTrigger>
+                           <TabsTrigger value="settings" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Settings</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="details" className="space-y-6">
+                           <div className="space-y-2">
+                              <Label htmlFor="title">Exam Title</Label>
+                              <Input
+                                 id="title"
+                                 value={title}
+                                 onChange={(e) => setTitle(e.target.value)}
+                                 placeholder="e.g. Mid-Term Physics Assessment"
+                                 className="h-11"
+                              />
+                           </div>
+
+                           <div className="grid grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                 <Label htmlFor="duration">Duration (Minutes)</Label>
+                                 <div className="relative">
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                       id="duration"
+                                       type="number"
+                                       value={duration}
+                                       onChange={(e) => setDuration(e.target.value)}
+                                       placeholder="60"
+                                       className="pl-10 h-11"
+                                    />
+                                 </div>
+                              </div>
+                              <div className="space-y-2">
+                                 <Label htmlFor="marks">Total Marks</Label>
+                                 <div className="relative">
+                                    <BarChart2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                       id="marks"
+                                       type="number"
+                                       value={totalMarks}
+                                       onChange={(e) => setTotalMarks(e.target.value)}
+                                       placeholder="100"
+                                       className="pl-10 h-11"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                 <Label htmlFor="start">Start Time</Label>
+                                 <Input
+                                    id="start"
+                                    type="datetime-local"
+                                    value={startTime}
+                                    onChange={(e) => setStartTime(e.target.value)}
+                                    className="h-11"
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <Label htmlFor="end">End Time (Auto-calculated)</Label>
+                                 <Input
+                                    id="end"
+                                    type="datetime-local"
+                                    value={endTime}
+                                    readOnly
+                                    className="h-11 bg-muted/50 text-muted-foreground"
+                                 />
+                              </div>
+                           </div>
+                        </TabsContent>
+
+                        <TabsContent value="settings" className="space-y-6">
+                           <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                              <div className="space-y-0.5">
+                                 <div className="flex items-center gap-2">
+                                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                    <Label className="text-base font-bold">Proctoring</Label>
+                                 </div>
+                                 <p className="text-xs text-muted-foreground">Enable AI-based monitoring during the exam</p>
+                              </div>
+                              <Switch checked={proctoringEnabled} onCheckedChange={setProctoringEnabled} />
+                           </div>
+
+                           <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                              <div className="space-y-0.5">
+                                 <div className="flex items-center gap-2">
+                                    <BarChart2 className="w-4 h-4 text-blue-500" />
+                                    <Label className="text-base font-bold">Show Results</Label>
+                                 </div>
+                                 <p className="text-xs text-muted-foreground">Allow students to see results immediately</p>
+                              </div>
+                              <Switch checked={showResults} onCheckedChange={setShowResults} />
+                           </div>
+                        </TabsContent>
+                     </Tabs>
+
+                     <div className="mt-8 pt-6 border-t border-border flex justify-end">
+                        <Button type="submit" className="font-bold px-8 h-11 shadow-lg shadow-primary/20">
+                           Create & Add Questions
+                           <ChevronRight className="w-4 h-4 ml-2" />
+                        </Button>
+                     </div>
+                  </Card>
+               </form>
+            </div>
+
+            {/* Info Panel */}
+            <div className="space-y-6">
+               <Card className="p-6 rounded-2xl shadow-card border border-border bg-card">
+                  <h3 className="font-bold text-foreground mb-4">Instructions</h3>
+                  <ul className="space-y-3">
+                     <li className="flex gap-3 text-sm text-muted-foreground">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">1</span>
+                        Enter basic exam details like title, duration, and total marks.
+                     </li>
+                     <li className="flex gap-3 text-sm text-muted-foreground">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">2</span>
+                        Configure proctoring settings if security is required.
+                     </li>
+                     <li className="flex gap-3 text-sm text-muted-foreground">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">3</span>
+                        Once created, you will be redirected to the question pool manager.
+                     </li>
+                  </ul>
+               </Card>
+
+               <Card className="p-6 rounded-2xl shadow-card border border-border bg-gradient-to-br from-primary/5 to-transparent">
+                  <div className="flex items-center gap-3 mb-3">
+                     <Sparkles className="w-5 h-5 text-primary" />
+                     <h3 className="font-bold text-primary">AI Assistance</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-4">
+                     Our AI can help you generate relevant questions based on your exam title and description in the next step.
+                  </p>
+               </Card>
             </div>
          </div>
-         <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-4">Create <span className="text-emerald-500">Evaluation</span></h1>
-         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs opacity-60">Define the parameters for your next evaluation session.</p>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <Tabs defaultValue="basic" className="space-y-8">
-          <TabsList className="flex w-full overflow-x-auto h-auto bg-transparent border-b border-slate-200 dark:border-slate-800 rounded-none p-0 gap-8 justify-start no-scrollbar">
-            <TabsTrigger value="basic" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              01. Identity
-            </TabsTrigger>
-            <TabsTrigger value="timing" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              02. Chronology
-            </TabsTrigger>
-            <TabsTrigger value="proctoring" className="rounded-none border-b-2 border-transparent px-0 pb-4 text-xs font-black uppercase tracking-widest text-slate-400 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-500 data-[state=active]:bg-transparent transition-all">
-              03. Integrity
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="basic" className="mt-0 focus-visible:outline-none">
-            <div className="space-y-4">
-               <div className="space-y-3">
-                  <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Assessment Title</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Advanced Cryptographic Protocols"
-                    className="h-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
-                  />
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.1em] opacity-60 ml-1">Establish a unique identifier for the evaluators and students.</p>
-               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="timing" className="mt-0 focus-visible:outline-none">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="space-y-4">
-                  <Label htmlFor="duration" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Duration (Min)</Label>
-                  <div className="relative group">
-                     <Clock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
-                     <Input
-                        id="duration"
-                        type="number"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        placeholder="60"
-                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
-                     />
-                  </div>
-               </div>
-               <div className="space-y-4">
-                  <Label htmlFor="marks" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Terminal Score</Label>
-                  <div className="relative group">
-                     <Plus className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
-                     <Input
-                        id="marks"
-                        type="number"
-                        value={totalMarks}
-                        onChange={(e) => setTotalMarks(e.target.value)}
-                        placeholder="100"
-                        className="h-16 pl-16 rounded-[1.5rem] border-slate-200 text-xl font-black bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
-                     />
-                  </div>
-               </div>
-               <div className="space-y-4">
-                  <Label htmlFor="start" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Start Threshold</Label>
-                  <Input
-                    id="start"
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="h-16 rounded-[1.5rem] border-slate-200 font-black text-sm bg-white focus:ring-8 focus:ring-emerald-500/5 dark:border-emerald-500/10 dark:bg-emerald-950/20 shadow-sm"
-                  />
-               </div>
-               <div className="space-y-4">
-                  <Label htmlFor="end" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Expiry Threshold (Auto)</Label>
-                  <Input
-                    id="end"
-                    type="datetime-local"
-                    value={endTime}
-                    readOnly
-                    className="h-16 rounded-[1.5rem] border-slate-200 bg-slate-50 border-dashed text-slate-400 cursor-not-allowed font-black text-sm opacity-60"
-                  />
-               </div>
-            </div>
-          </TabsContent>
-
-
-
-          <TabsContent value="proctoring" className="mt-0 focus-visible:outline-none">
-             <div className="space-y-6">
-               <div className="flex items-center justify-between p-10 rounded-[3rem] bg-slate-950 text-white shadow-2xl shadow-slate-200 dark:shadow-none border border-white/5 relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 h-40 w-40 bg-emerald-500/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-emerald-500/20 transition-all" />
-                  <div className="space-y-3 relative z-10">
-                     <div className="flex items-center gap-4 mb-2">
-                        <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                           <ShieldCheck className="h-6 w-6 text-emerald-400" />
-                        </div>
-                        <h4 className="font-black text-2xl tracking-tighter">AI Integrity Guard</h4>
-                     </div>
-                     <p className="text-sm text-slate-400 max-w-sm leading-relaxed font-bold">
-                        Active evaluation monitoring with gaze tracking and biometric verification.
-                     </p>
-                  </div>
-                  <Switch
-                    checked={proctoringEnabled}
-                    onCheckedChange={setProctoringEnabled}
-                    className="scale-150 data-[state=checked]:bg-emerald-500 transition-all"
-                  />
-               </div>
-
-               <div className="flex items-center justify-between p-10 rounded-[3rem] bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group transition-all hover:border-blue-500/30">
-                  <div className="space-y-3 relative z-10">
-                     <div className="flex items-center gap-4 mb-2">
-                        <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                           <BarChart2 className="h-6 w-6 text-blue-500" />
-                        </div>
-                        <h4 className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Display Results</h4>
-                     </div>
-                     <p className="text-sm text-slate-500 max-w-sm leading-relaxed font-bold">
-                        Allow students to see their score and section breakdown immediately after submission.
-                     </p>
-                  </div>
-                  <Switch
-                    checked={showResults}
-                    onCheckedChange={setShowResults}
-                    className="scale-150 data-[state=checked]:bg-blue-500 transition-all"
-                  />
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-emerald-950/20 dark:border-emerald-500/10 shadow-sm">
-                     <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Digital Surveillance</h5>
-                     <ul className="space-y-5">
-                        {["Facial Identity Verification", "Gaze Vector tracking", "Neural Speech analysis", "Peripheral monitoring"].map((item) => (
-                           <li key={item} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                              {item}
-                           </li>
-                        ))}
-                     </ul>
-                  </div>
-                  <div className="p-8 rounded-[2rem] border border-slate-200 bg-white dark:bg-emerald-950/20 dark:border-emerald-500/10 shadow-sm">
-                     <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-slate-100 pb-4">Compliance Protocol</h5>
-                     <ul className="space-y-5">
-                        {["Matrix Escape (3 strikes)", "Browser Sandbox isolation", "Full-session telemetry", "Instant termination"].map((item) => (
-                             <li key={item} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                                <div className="w-2 h-2 rounded-full bg-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.3)]" />
-                                {item}
-                             </li>
-                        ))}
-                     </ul>
-                  </div>
-               </div>
-             </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="pt-12 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-10 pb-20">
-           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-sm leading-relaxed italic border-l-2 border-emerald-500/20 pl-6">
-             By provisioning this matrix, you authorize the deployment of evaluation instances to the student pool.
-           </p>
-           <div className="flex items-center gap-6 w-full md:w-auto">
-              <Button variant="ghost" type="button" onClick={() => router.back()} className="h-16 px-10 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
-                Cancel
-              </Button>
-              <Button type="submit" className="h-16 px-14 rounded-2xl bg-emerald-500 font-black text-slate-950 shadow-[0_10px_30px_rgba(34,197,94,0.3)] hover:bg-emerald-400 hover:shadow-[0_15px_35px_rgba(34,197,94,0.4)] transition-all active:scale-95 flex-1 md:flex-none">
-                Submit
-                <ChevronRight className="ml-3 h-5 w-5" />
-              </Button>
-           </div>
-        </div>
-      </form>
-    </div>
-  );
+   );
 }

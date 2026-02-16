@@ -1,18 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Plus, 
-  Search, 
-  Trash2, 
-  Settings2, 
-  Save, 
-  ChevronRight, 
-  MessageSquare, 
-  Workflow, 
-  ShieldCheck,
+import {
+  Plus,
+  Search,
+  Trash2,
+  Settings2,
+  Save,
+  Layout,
+  MessageSquare,
+  Workflow,
   Sparkles,
-  Layout
+  ShieldCheck,
+  LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Section {
   id: string;
@@ -135,7 +136,7 @@ export default function SectionManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure? This will remove the section template.")) return;
-    
+
     const toastId = toast.loading("Deleting...");
     try {
       const resp = await fetch(`/api/sections?id=${id}`, { method: "DELETE" });
@@ -148,28 +149,31 @@ export default function SectionManagement() {
     }
   };
 
-  const filteredSections = sections.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
+  const filteredSections = sections.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.description?.toLowerCase().includes(search.toLowerCase())
   );
 
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 min-h-screen bg-slate-50/50 dark:bg-slate-900/50">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-            <Layout className="w-6 h-6 text-emerald-500" />
-            Section Templates
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">Manage AI identities and validation rules for exam sections.</p>
+    <div className="w-full animate-fade-in pb-10 px-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-bold">
+            <LayoutTemplate className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground font-title">Section Templates</h1>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">Manage AI identities for different exam sections</p>
+          </div>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setEditingId(null);
             setFormData({ name: "", description: "", identityPrompt: "", transformationPrompt: "", validationRules: "{}" });
           }}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+          className="h-11 px-6 rounded-xl font-bold shadow-lg shadow-primary/20"
         >
           <Plus className="w-4 h-4 mr-2" />
           Create Template
@@ -180,42 +184,43 @@ export default function SectionManagement() {
         {/* List View */}
         <div className="lg:col-span-4 space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input 
-              placeholder="Search sections..." 
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search sections..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-10 bg-white border-slate-200 shadow-sm"
+              className="pl-10 h-11 bg-card border-border shadow-sm rounded-xl"
             />
           </div>
 
           <div className="space-y-3">
             {filteredSections.map(section => (
-              <Card 
+              <Card
                 key={section.id}
                 onClick={() => {
                   setEditingId(section.id);
                   setFormData(section);
                 }}
-                className={`p-4 cursor-pointer transition-all border-none shadow-sm ${
-                  editingId === section.id 
-                  ? "ring-2 ring-emerald-500 bg-emerald-50/30" 
-                  : "hover:bg-white bg-slate-100/50"
-                }`}
+                className={`p-4 cursor-pointer transition-all border shadow-sm rounded-xl ${editingId === section.id
+                    ? "border-primary bg-primary/5 shadow-md"
+                    : "bg-card border-border hover:border-primary/50"
+                  }`}
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-700">{section.name}</h3>
-                  <button 
+                  <h3 className="font-bold text-foreground">{section.name}</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(section.id);
                     }}
-                    className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">{section.description}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{section.description}</p>
               </Card>
             ))}
           </div>
@@ -223,100 +228,97 @@ export default function SectionManagement() {
 
         {/* Editor View */}
         <div className="lg:col-span-8">
-          <Card className="p-6 border-none shadow-xl bg-white min-h-[600px] flex flex-col relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-cyan-400" />
-            
-            <div className="flex items-center justify-between mb-8">
+          <Card className="p-6 md:p-8 rounded-2xl shadow-card border border-border bg-card">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                <div className="p-2 bg-primary/10 text-primary rounded-lg hidden md:block">
                   <Settings2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-black text-slate-800 uppercase tracking-tight">
+                  <h2 className="text-lg font-bold text-foreground">
                     {editingId ? "Edit Identity Template" : "New Identity Template"}
                   </h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {formData.name || "UNNAMED"}
                   </p>
                 </div>
               </div>
-              <Button onClick={handleSave} className="bg-slate-900 hover:bg-black text-white px-6 font-bold shadow-lg transform active:scale-95 transition-all">
+              <Button onClick={handleSave} className="font-bold shadow-lg h-10">
                 <Save className="w-4 h-4 mr-2" />
                 Save Changes
               </Button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 flex-1">
+            <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5 ">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Section Name</Label>
-                    <button 
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Section Name</Label>
+                    <button
                       onClick={handleAutofill}
                       disabled={autofilling}
-                      className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
                     >
                       <Sparkles className={`w-3 h-3 ${autofilling ? "animate-pulse" : ""}`} />
                       {autofilling ? "Crafting..." : "Magic Autofill"}
                     </button>
                   </div>
-                  <Input 
+                  <Input
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="e.g., Quantum Physics" 
-                    className="h-10 font-bold"
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Quantum Physics"
+                    className="h-10 font-medium"
                   />
                 </div>
 
-                <div>
-                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Short Description</Label>
-                  <Textarea 
+                <div className="space-y-2">
+                  <Label>Short Description</Label>
+                  <Textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Visible to the RAG Agent for classification..." 
-                    className="h-20 resize-none pt-3"
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description for classification..."
+                    className="h-24 resize-none"
                   />
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <div className="p-4 bg-muted/20 rounded-xl border border-dashed border-border">
                   <div className="flex items-center gap-2 mb-3">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <Label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Validation Rules (JSON)</Label>
+                    <Label className="text-xs uppercase font-bold tracking-wider text-foreground">Validation Rules (JSON)</Label>
                   </div>
-                  <Textarea 
+                  <Textarea
                     value={formData.validationRules}
-                    onChange={(e) => setFormData({...formData, validationRules: e.target.value})}
-                    placeholder='{"mustContainDigits": true, "minWordCount": 5}' 
-                    className="font-mono text-[10px] h-24 bg-white"
+                    onChange={(e) => setFormData({ ...formData, validationRules: e.target.value })}
+                    placeholder='{"mustContainDigits": true}'
+                    className="font-mono text-xs h-24 bg-background"
                   />
-                  <p className="text-[9px] text-slate-400 mt-2 font-medium">Define rules that the AI must follow when generating questions.</p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <div className="group">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Prompt (AI Persona)</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="w-4 h-4 text-blue-500" />
+                    <Label>Identity Prompt (AI Persona)</Label>
                   </div>
-                  <Textarea 
+                  <Textarea
                     value={formData.identityPrompt}
-                    onChange={(e) => setFormData({...formData, identityPrompt: e.target.value})}
-                    placeholder="You are an expert in... Frame questions that..." 
-                    className="h-32 text-xs pt-3 leading-relaxed border-slate-200 focus:border-blue-500 transition-colors"
+                    onChange={(e) => setFormData({ ...formData, identityPrompt: e.target.value })}
+                    placeholder="You are an expert in..."
+                    className="h-40 text-sm leading-relaxed border-border focus:border-blue-500/50 transition-colors"
                   />
                 </div>
 
-                <div className="group">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Workflow className="w-3.5 h-3.5 text-purple-500" />
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transformation Logic</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Workflow className="w-4 h-4 text-purple-500" />
+                    <Label>Transformation Logic</Label>
                   </div>
-                  <Textarea 
+                  <Textarea
                     value={formData.transformationPrompt}
-                    onChange={(e) => setFormData({...formData, transformationPrompt: e.target.value})}
-                    placeholder="If the topic is X, transform it into Y..." 
-                    className="h-32 text-xs pt-3 leading-relaxed border-slate-200 focus:border-purple-500 transition-colors"
+                    onChange={(e) => setFormData({ ...formData, transformationPrompt: e.target.value })}
+                    placeholder="Transform topics into..."
+                    className="h-32 text-sm leading-relaxed border-border focus:border-purple-500/50 transition-colors"
                   />
                 </div>
               </div>

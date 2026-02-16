@@ -144,6 +144,11 @@ const ExamPage = () => {
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
+                                <Link href={`/admin/edit-exam/${exam.id}`}>
+                                    <Button variant="outline" size="sm" className="w-full mt-2">
+                                        Edit Details
+                                    </Button>
+                                </Link>
                             </div>
                         </div>
                     ))}

@@ -205,18 +205,23 @@ export function ExamProvider({ children }: { children: ReactNode }) {
 
   const addResult = async (result: Partial<Submission>) => {
     try {
+      console.log("Submitting result payload:", result);
       const resp = await fetch("/api/results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(result),
       });
+
       if (resp.ok) {
         fetchResults();
         return true;
       }
+
+      const errData = await resp.json().catch(() => ({ error: "Unknown API error" }));
+      console.error("Failed to add result:", errData);
       return false;
     } catch (err) {
-      console.error("Failed to add result:", err);
+      console.error("Failed to add result (Network/Client):", err);
       return false;
     }
   };

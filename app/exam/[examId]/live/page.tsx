@@ -34,16 +34,23 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 export default function LiveExamPage() {
   const { examId } = useParams();
-  const { exams, addResult, student } = useExam();
+  const { exams, addResult, student, loading } = useExam();
   const router = useRouter();
   const exam = exams.find((e) => e.id === examId);
 
   const [preCheck, setPreCheck] = useState(true);
 
+  // Skip pre-check if proctoring is disabled
+  useEffect(() => {
+    if (exam && !exam.proctoringEnabled) {
+      setPreCheck(false);
+    }
+  }, [exam]);
+
 
   const shuffledQuestions = useMemo(() => {
     if (!exam) return [];
-    
+
     // Group all questions by section
     const pools: Record<string, typeof exam.questions> = {};
     exam.questions.forEach(q => {
@@ -78,9 +85,15 @@ export default function LiveExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const startTime = useMemo(() => Date.now(), []);
-  
+
   const submitExam = useCallback(async (isTimeout = false) => {
-    if (submitted || isSubmitting || !exam || !student) return;
+    if (submitted || isSubmitting || !exam) return;
+
+    if (!student) {
+      toast.error("Session Error: Student identity missing. Please refresh the page.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitted(true);
 
@@ -129,10 +142,10 @@ export default function LiveExamPage() {
         sectionalResults[section] += m;
       }
     });
-    
+
     const score = totalObtained;
 
-    await addResult({
+    const success = await addResult({
       id: `r-${Date.now()}`,
       examId: exam.id,
       studentName: student.name,
@@ -148,6 +161,13 @@ export default function LiveExamPage() {
       submittedAt: new Date(),
     } as any);
 
+    if (!success) {
+      setIsSubmitting(false);
+      setSubmitted(false);
+      toast.error("Submission Failed. Please try again or contact invigilator.");
+      return;
+    }
+
     sessionStorage.setItem(
       "lastResult",
       JSON.stringify({
@@ -159,11 +179,12 @@ export default function LiveExamPage() {
         sectionScores: sectionalResults,
       }),
     );
-    
+
     // Immediate redirect to avoid proctoring staying active
     router.replace(`/exam/${examId}/result`);
   }, [
     submitted,
+    isSubmitting, // Added dependency
     exam,
     student,
     answers,
@@ -255,7 +276,7 @@ export default function LiveExamPage() {
       };
     }
   }, [preCheck]);
-  
+
   const sectionGroups = useMemo(() => {
     const groups: Record<string, { startIndex: number; count: number; questions: any[] }> = {};
     shuffledQuestions.forEach((q, idx) => {
@@ -270,7 +291,9 @@ export default function LiveExamPage() {
   }, [shuffledQuestions]);
 
 
-  if (!exam || shuffledQuestions.length === 0) {
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse">Loading...</div>;
+  if (!exam) return <div className="p-20 text-center text-destructive font-bold">Exam not found</div>;
+  if (shuffledQuestions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="text-center space-y-4">
@@ -304,7 +327,7 @@ export default function LiveExamPage() {
               <h1 className="font-bold text-lg leading-tight truncate max-w-[300px]">{exam.title}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                   Q{currentQ + 1} / {shuffledQuestions.length}
+                  Q{currentQ + 1} / {shuffledQuestions.length}
                 </span>
                 {exam.proctoringEnabled && (
                   <span className="text-[10px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
@@ -361,7 +384,7 @@ export default function LiveExamPage() {
                 <p className="font-bold text-sm text-foreground">{activeSection}</p>
               </div>
             </div>
-            
+
             <div className="p-8 flex-1">
               <QuestionCard
                 question={question}
@@ -383,42 +406,46 @@ export default function LiveExamPage() {
                   }
                 }}
               />
+
+              {/* Primary Navigation Buttons - Inside Card for Flow */}
+              <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+                <Button variant="outline" size="lg" onClick={() => setCurrentQ((c) => c - 1)} disabled={currentQ === 0} className="rounded-xl border-2 px-6 font-bold">
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Previous Question
+                </Button>
+
+                {currentQ === shuffledQuestions.length - 1 ? (
+                  <Button onClick={() => setShowConfirm(true)} size="lg" className="rounded-xl px-8 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20" disabled={isSubmitting}>
+                    {isSubmitting ? "Submitting..." : "Finish Exam"}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setCurrentQ((c) => c + 1)} size="lg" className="rounded-xl px-8 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                    Save & Next <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
             </div>
           </section>
 
-          <div className="bg-background rounded-2xl border border-border shadow-sm p-4 flex items-center justify-between">
-            <Button variant="outline" size="lg" onClick={() => setCurrentQ((c) => c - 1)} disabled={currentQ === 0} className="rounded-xl border-2">
-              <ChevronLeft className="w-4 h-4 mr-2" /> Previous
-            </Button>
-            
-            <div className="hidden md:flex gap-2">
+          {/* Question Palette / Map */}
+          <div className="bg-background rounded-2xl border border-border shadow-sm p-4 overflow-x-auto no-scrollbar">
+            <div className="flex gap-2 min-w-max px-2">
               {shuffledQuestions.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentQ(i)}
-                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${i === currentQ ? "bg-primary text-white scale-110" : answers[shuffledQuestions[i].id] !== undefined ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}
+                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 ${i === currentQ ? "bg-primary text-white scale-110 shadow-md" : answers[shuffledQuestions[i].id] !== undefined ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                 >
                   {i + 1}
                 </button>
               ))}
             </div>
-
-            {currentQ === shuffledQuestions.length - 1 ? (
-              <Button onClick={() => setShowConfirm(true)} size="lg" className="rounded-xl px-8 font-bold" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Finish Exam"}
-              </Button>
-            ) : (
-              <Button onClick={() => setCurrentQ((c) => c + 1)} size="lg" className="rounded-xl px-8 font-bold">
-                Next <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
           </div>
         </div>
 
         <div className="lg:col-span-4 h-full flex flex-col gap-6">
           {exam.proctoringEnabled && (
             <div className="bg-background rounded-3xl border border-border shadow-card overflow-hidden">
-               <AIProctor onViolation={handleAIViolation} isFinished={submitted} />
+              <AIProctor onViolation={handleAIViolation} isFinished={submitted} />
             </div>
           )}
 

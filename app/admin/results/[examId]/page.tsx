@@ -1,33 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Download, 
-  Search, 
-  RefreshCw, 
-  ClipboardList, 
-  Trash2, 
-  CalendarX, 
-  ArrowLeft,
-  LayoutGrid,
-  CheckCircle2,
-  Trophy,
-  Users,
-  AlertCircle,
-  Eye,
-  FileSearch,
-  Check,
-  X as XIcon,
-  Sparkles as SparklesIcon
+import {
+   Download,
+   Search,
+   RefreshCw,
+   ClipboardList,
+   Trash2,
+   CalendarX,
+   ArrowLeft,
+   LayoutGrid,
+   CheckCircle2,
+   Trophy,
+   Users,
+   AlertCircle,
+   Eye,
+   FileSearch,
+   Check,
+   X as XIcon,
+   Sparkles as SparklesIcon,
+   BarChart2
 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+   Dialog,
+   DialogContent,
+   DialogHeader,
+   DialogTitle,
+   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useExam } from "@/hooks/contexts/ExamContext";
@@ -37,360 +38,370 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 
 export default function ViewResults() {
-  const { exams, results, fetchResults } = useExam();
-  const { examId } = useParams();
-  const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [fClass, setFClass] = useState("all");
-  const [fSection, setFSection] = useState("all");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
-  const [validatingJustification, setValidatingJustification] = useState<Record<string, boolean>>({});
-  const [aiFeedbacks, setAiFeedbacks] = useState<Record<string, any>>({});
+   const { exams, results, fetchResults } = useExam();
+   const { examId } = useParams();
+   const router = useRouter();
+   const [search, setSearch] = useState("");
+   const [fClass, setFClass] = useState("all");
+   const [fSection, setFSection] = useState("all");
+   const [isRefreshing, setIsRefreshing] = useState(false);
+   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+   const [validatingJustification, setValidatingJustification] = useState<Record<string, boolean>>({});
+   const [aiFeedbacks, setAiFeedbacks] = useState<Record<string, any>>({});
 
-  const currentExam = exams.find((e) => e.id === examId);
+   const currentExam = exams.find((e) => e.id === examId);
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchResults();
-    setIsRefreshing(false);
-    toast.success("Results refreshed");
-  };
-
-  const handleReschedule = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to reschedule ${name}? This will delete their current submission and allow them to retake the exam.`)) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/results/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete result");
-      toast.success(`${name} has been rescheduled!`);
+   // Auto-refresh on mount to ensure we see new submissions
+   useEffect(() => {
       fetchResults();
-    } catch (error) {
-      toast.error("Could not reschedule candidate");
-    }
-  };
+   }, []);
 
-  const filtered = results.filter((r) => {
-    if (examId && r.examId !== examId) return false;
-    if (fClass !== "all" && r.class !== fClass) return false;
-    if (fSection !== "all" && r.section !== fSection) return false;
-    
-    const name = (r.studentName || "").toLowerCase();
-    const usn = (r.usn || "").toLowerCase();
-    const s = search.toLowerCase();
-    return name.includes(s) || usn.includes(s);
-  });
+   const handleRefresh = async () => {
+      setIsRefreshing(true);
+      await fetchResults();
+      setIsRefreshing(false);
+      toast.success("Consolidated ledger updated");
+   };
 
-  const classes = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.class)));
-  const studentSections = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.section)));
+   const handleReschedule = async (id: string, name: string) => {
+      if (!confirm(`Confirm reset for ${name}? This action is irreversible.`)) {
+         return;
+      }
 
-  // Identify all unique sections from submissions
-  const submissionSections = Array.from(new Set(
-    filtered.flatMap(r => {
-        try {
+      try {
+         const res = await fetch(`/api/results/${id}`, { method: "DELETE" });
+         if (!res.ok) throw new Error("Failed to delete result");
+         toast.success(`${name} reset successfully`);
+         fetchResults();
+      } catch (error) {
+         toast.error("Operation failed");
+      }
+   };
+
+   const filtered = results.filter((r) => {
+      if (examId && r.examId !== examId) return false;
+      if (fClass !== "all" && r.class !== fClass) return false;
+      if (fSection !== "all" && r.section !== fSection) return false;
+
+      const name = (r.studentName || "").toLowerCase();
+      const usn = (r.usn || "").toLowerCase();
+      const s = search.toLowerCase();
+      return name.includes(s) || usn.includes(s);
+   });
+
+   const classes = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.class)));
+   const studentSections = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.section)));
+
+   const submissionSections = Array.from(new Set(
+      filtered.flatMap(r => {
+         try {
             const scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores;
             return Object.keys(scores || {});
-        } catch { return []; }
-    })
-  ));
+         } catch { return []; }
+      })
+   ));
 
-  const downloadExcel = () => {
-    const data = filtered.map(r => {
-      let sectionData: Record<string, any> = {};
-      try {
-        const scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores;
-        // Use sections from exam config if available, otherwise fallback to submission sections
-        const sectionsToUse = currentExam?.sectionsConfig?.map(s => s.name) || submissionSections;
-        sectionsToUse.forEach(s => {
-          sectionData[`Section: ${s}`] = scores?.[s] || 0;
-        });
-      } catch {}
+   const downloadExcel = () => {
+      const data = filtered.map(r => {
+         let sectionData: Record<string, any> = {};
+         try {
+            const scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores;
+            const sectionsToUse = currentExam?.sectionsConfig?.map(s => s.name) || submissionSections;
+            sectionsToUse.forEach(s => {
+               sectionData[`Section: ${s}`] = scores?.[s] || 0;
+            });
+         } catch { }
 
-      return {
-        "Student Name": r.studentName,
-        "USN": r.usn,
-        "Email": r.email,
-        "Class": r.class,
-        "Section": r.section,
-        "Total Score": r.score,
-        "Max Marks": currentExam?.totalMarks || 0,
-        ...sectionData,
-        "Violations": r.violations,
-        "Submitted At": format(new Date(r.submittedAt), "yyyy-MM-dd HH:mm:ss")
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
-    XLSX.writeFile(workbook, `results-${examId}-${Date.now()}.xlsx`);
-    toast.success("Excel Exported");
-  };
-
-  const validateAI = async (qId: string, qText: string, correct: string, just: string) => {
-    setValidatingJustification(prev => ({ ...prev, [qId]: true }));
-    try {
-      const resp = await fetch("/api/ai/validate-justification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: qText, correctAnswer: correct, studentJustification: just })
+         return {
+            "Student Name": r.studentName,
+            "USN": r.usn,
+            "Email": r.email,
+            "Class": r.class,
+            "Section": r.section,
+            "Total Score": r.score,
+            "Max Marks": currentExam?.totalMarks || 0,
+            ...sectionData,
+            "Violations": r.violations,
+            "Submitted At": format(new Date(r.submittedAt), "yyyy-MM-dd HH:mm:ss")
+         };
       });
-      const data = await resp.json();
-      setAiFeedbacks(prev => ({ ...prev, [`${selectedSubmission.id}-${qId}`]: data }));
-      toast.success("Analysis Complete");
-    } catch (e) {
-      toast.error("AI Validation Failed");
-    } finally {
-      setValidatingJustification(prev => ({ ...prev, [qId]: false }));
-    }
-  };
 
-  return (
-    <div className="w-full space-y-12 animate-fade-in pb-20 px-4">
-      {/* Header Section */}
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-8 py-4">
-        <div className="flex items-center gap-5">
-             <Link href="/admin/dashboard" className="p-4 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200 dark:border-slate-800">
-               <ArrowLeft className="w-5 h-5 text-slate-500" />
-             </Link>
-             <div>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {currentExam ? currentExam.title : "Exam Analysis"}
-                </h1>
-                <div className="flex items-center gap-3 mt-2">
-                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                      Evaluation Ledger • {filtered.length} Submissions
-                   </p>
-                </div>
-             </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="h-14 px-8 rounded-2xl font-black border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all active:scale-95">
-            <RefreshCw className={`w-4 h-4 mr-3 ${isRefreshing ? "animate-spin" : ""}`} />
-            Sync Results
-          </Button>
-          <Button onClick={downloadExcel} className="h-14 px-10 rounded-2xl bg-emerald-500 font-black text-slate-950 shadow-[0_10px_30px_rgba(34,197,94,0.2)] hover:bg-emerald-400 hover:shadow-[0_15px_35px_rgba(34,197,94,0.3)] transition-all active:scale-95">
-            <Download className="w-4 h-4 mr-3" />
-            Export Ledger
-          </Button>
-        </div>
-      </section>
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+      XLSX.writeFile(workbook, `results-${examId}-${Date.now()}.xlsx`);
+      toast.success("Export generated successfully");
+   };
 
-      {/* Stats Quick Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {[
-          { label: "Total Candidates", value: filtered.length, icon: Users, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Average Score", value: filtered.length > 0 ? Math.round(filtered.reduce((a, b) => a + b.score, 0) / filtered.length) : 0, icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
-          { label: "Integrity Alerts", value: filtered.reduce((a, b) => a + b.violations, 0), icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" }
-        ].map((s, idx) => (
-          <div key={idx} className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-2xl hover:-translate-y-2 group">
-             <div className="flex items-center justify-between mb-8">
-                <div className={`h-14 w-14 rounded-2xl ${s.bg} flex items-center justify-center ${s.color} transition-transform group-hover:rotate-6`}>
-                   <s.icon className="w-7 h-7" />
-                </div>
-                <div className="h-1.5 w-1.5 rounded-full bg-slate-100 dark:bg-slate-800" />
-             </div>
-             <p className="text-5xl font-black text-slate-950 dark:text-white tabular-nums tracking-tighter">{s.value}</p>
-             <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mt-4">{s.label}</h3>
-          </div>
-        ))}
-      </section>
+   const validateAI = async (qId: string, qText: string, correct: string, just: string) => {
+      setValidatingJustification(prev => ({ ...prev, [qId]: true }));
+      try {
+         const resp = await fetch("/api/ai/validate-justification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: qText, correctAnswer: correct, studentJustification: just })
+         });
+         const data = await resp.json();
+         setAiFeedbacks(prev => ({ ...prev, [`${selectedSubmission.id}-${qId}`]: data }));
+         toast.success("Validation complete");
+      } catch (e) {
+         toast.error("Validation failed");
+      } finally {
+         setValidatingJustification(prev => ({ ...prev, [qId]: false }));
+      }
+   };
 
-      {/* Filters */}
-      <section className="bg-white p-3 rounded-[2rem] border border-slate-200 flex flex-col md:flex-row gap-3 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-         <div className="flex-1 relative">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search by USN or Name..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-14 h-14 bg-slate-50 border-none rounded-2xl font-black dark:bg-slate-800/50 placeholder:text-slate-400 text-slate-900 dark:text-white"
-            />
+   return (
+      <div className="w-full animate-fade-in pb-10 px-4">
+         {/* Header */}
+         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center font-bold">
+                  <Trophy className="w-6 h-6 text-primary" />
+               </div>
+               <div>
+                  <h1 className="text-3xl font-bold text-foreground font-title">{currentExam ? currentExam.title : "Exam Results"}</h1>
+                  <p className="text-muted-foreground mt-1 text-sm font-medium">Evaluation Ledger • {filtered.length} Submissions</p>
+               </div>
+            </div>
+            <div className="flex items-center gap-3">
+               <Button variant="ghost" asChild className="font-bold">
+                  <Link href="/admin/dashboard">
+                     <ArrowLeft className="w-4 h-4 mr-2" />
+                     Back to Dashboard
+                  </Link>
+               </Button>
+               <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="font-bold">
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                  Sync
+               </Button>
+               <Button onClick={downloadExcel} className="bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+               </Button>
+            </div>
          </div>
-         <select value={fClass} onChange={(e) => setFClass(e.target.value)} className="h-14 px-8 rounded-2xl bg-slate-50 border-none font-black text-xs uppercase tracking-widest outline-none cursor-pointer dark:bg-slate-800/50 appearance-none border-r-[40px] border-r-transparent">
-            <option value="all">Class: All</option>
-            {classes.map(c => <option key={c} value={c}>{c}</option>)}
-         </select>
-         <select value={fSection} onChange={(e) => setFSection(e.target.value)} className="h-14 px-8 rounded-2xl bg-slate-50 border-none font-black text-xs uppercase tracking-widest outline-none cursor-pointer dark:bg-slate-800/50 appearance-none border-r-[40px] border-r-transparent">
-            <option value="all">Section: All</option>
-            {studentSections.map(s => <option key={s} value={s}>{s}</option>)}
-         </select>
-      </section>
 
-      {/* Results Matrix */}
-      <section className="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-sm dark:bg-slate-900 dark:border-slate-800">
-         <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-               <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/20">
-                     <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Candidate Identity</th>
-                     <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Classification</th>
-                     <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Performance Matrix</th>
-                     <th className="px-10 py-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Operations</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em] text-xs">No entries detected in matrix</td>
-                    </tr>
-                  ) : filtered.map((r) => {
-                    let scores = {};
-                    try {
-                      scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores || {};
-                    } catch (e) {
-                      console.error("Failed to parse sectionScores-S1:", e);
-                    }
-                    return (
-                      <tr key={r.id} className="group hover:bg-emerald-50/10 transition-all">
-                        <td className="px-10 py-8">
-                           <div className="flex items-center gap-5">
-                              <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-emerald-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm group-hover:scale-110 transition-transform">
-                                 {r.studentName.charAt(0)}
-                              </div>
-                              <div>
-                                 <p className="font-black text-lg text-slate-900 dark:text-white capitalize leading-none mb-1.5">{r.studentName}</p>
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{r.usn}</p>
-                              </div>
-                           </div>
-                        </td>
-                        <td className="px-10 py-8">
-                           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                              {r.class} <span className="opacity-30">•</span> {r.section}
-                           </div>
-                        </td>
-                        <td className="px-10 py-8">
-                           <div className="flex flex-col gap-4">
-                              <div className="flex items-end gap-3">
-                                 <span className="text-3xl font-black text-slate-950 dark:text-white leading-none">{r.score}</span>
-                                 <span className="text-[10px] bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg font-black tracking-widest shadow-[0_5px_15px_rgba(34,197,94,0.2)] mb-0.5">
-                                    {currentExam ? Math.round((r.score / currentExam.totalMarks) * 100) : 0}%
-                                 </span>
-                                 {r.violations > 0 && (
-                                   <span className="text-[9px] bg-red-500 text-white px-2.5 py-1 rounded-lg font-black tracking-widest uppercase">
-                                      {r.violations} Alerts
-                                   </span>
+         {/* Stats Cards */}
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {[
+               { label: "Total Candidates", value: filtered.length, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+               { label: "Average Score", value: filtered.length > 0 ? Math.round(filtered.reduce((a, b) => a + b.score, 0) / filtered.length) : 0, icon: BarChart2, color: "text-amber-500", bg: "bg-amber-500/10" },
+               { label: "Integrity Alerts", value: filtered.reduce((a, b) => a + b.violations, 0), icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" }
+            ].map((s, idx) => (
+               <div key={idx} className="bg-card p-6 rounded-2xl border border-border shadow-card hover:shadow-lg transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                     <div className={`h-10 w-10 rounded-xl ${s.bg} flex items-center justify-center ${s.color}`}>
+                        <s.icon className="w-5 h-5" />
+                     </div>
+                  </div>
+                  <div>
+                     <p className="text-3xl font-bold text-foreground tabular-nums">{s.value}</p>
+                     <p className="text-xs font-medium text-muted-foreground mt-1">{s.label}</p>
+                  </div>
+               </div>
+            ))}
+         </div>
+
+         {/* Filters & Table */}
+         <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-4">
+               <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                     placeholder="Search candidates..."
+                     value={search}
+                     onChange={(e) => setSearch(e.target.value)}
+                     className="pl-9 h-11 bg-card"
+                  />
+               </div>
+               <div className="flex gap-4">
+                  <select
+                     value={fClass}
+                     onChange={(e) => setFClass(e.target.value)}
+                     className="h-11 px-4 rounded-md bg-card border border-input text-sm font-medium focus:ring-1 focus:ring-ring"
+                  >
+                     <option value="all">Class: All</option>
+                     {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select
+                     value={fSection}
+                     onChange={(e) => setFSection(e.target.value)}
+                     className="h-11 px-4 rounded-md bg-card border border-input text-sm font-medium focus:ring-1 focus:ring-ring"
+                  >
+                     <option value="all">Section: All</option>
+                     {studentSections.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+               </div>
+            </div>
+
+            <div className="bg-card rounded-2xl border border-border shadow-card overflow-hidden">
+               <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                     <thead>
+                        <tr className="border-b border-border bg-muted/30">
+                           <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Candidate</th>
+                           <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Class Info</th>
+                           <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Performance</th>
+                           <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-border">
+                        {filtered.length === 0 ? (
+                           <tr>
+                              <td colSpan={4} className="py-12 text-center text-muted-foreground font-medium">No results found</td>
+                           </tr>
+                        ) : filtered.map((r) => {
+                           let scores = {};
+                           try {
+                              scores = typeof r.sectionScores === 'string' ? JSON.parse(r.sectionScores) : r.sectionScores || {};
+                           } catch (e) { }
+
+                           return (
+                              <tr key={r.id} className="group hover:bg-muted/30 transition-colors">
+                                 <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary border border-primary/20">
+                                          {r.studentName.charAt(0)}
+                                       </div>
+                                       <div>
+                                          <p className="font-bold text-foreground text-sm">{r.studentName}</p>
+                                          <p className="text-xs text-muted-foreground font-mono">{r.usn}</p>
+                                       </div>
+                                    </div>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                       <span className="px-2 py-1 rounded bg-muted text-xs font-medium text-foreground border border-border">
+                                          {r.class} - {r.section}
+                                       </span>
+                                    </div>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <div className="space-y-2">
+                                       <div className="flex items-center gap-2">
+                                          <span className="text-lg font-bold text-foreground">{r.score}</span>
+                                          <span className="text-xs text-muted-foreground">/ {currentExam?.totalMarks}</span>
+                                          {r.violations > 0 && (
+                                             <span className="ml-2 text-[10px] bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-200 dark:border-red-800">
+                                                {r.violations} Alerts
+                                             </span>
+                                          )}
+                                       </div>
+                                       <div className="flex flex-wrap gap-1">
+                                          {Object.entries(scores || {}).map(([s, val]) => (
+                                             <span key={s} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                                {s}: <strong className="text-foreground">{val as any}</strong>
+                                             </span>
+                                          ))}
+                                       </div>
+                                    </div>
+                                 </td>
+                                 <td className="px-6 py-4 text-right space-x-2">
+                                    <Button variant="outline" size="sm" onClick={() => setSelectedSubmission(r)} className="h-8 text-xs font-bold">
+                                       <Eye className="w-3.5 h-3.5 mr-2" /> View
+                                    </Button>
+                                    <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       onClick={() => handleReschedule(r.id, r.studentName)}
+                                       className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                       <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                 </td>
+                              </tr>
+                           );
+                        })}
+                     </tbody>
+                  </table>
+               </div>
+            </div>
+         </div>
+
+         {/* Details Modal */}
+         <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-0 border-border shadow-2xl bg-card">
+               <div className="p-6 border-b border-border bg-muted/10">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                           {selectedSubmission?.studentName.charAt(0)}
+                        </div>
+                        <div>
+                           <h2 className="text-xl font-bold text-foreground">{selectedSubmission?.studentName}</h2>
+                           <p className="text-sm font-medium text-muted-foreground">{selectedSubmission?.usn} • Detailed Report</p>
+                        </div>
+                     </div>
+                     <div className="text-right bg-background px-4 py-2 rounded-xl border border-border">
+                        <p className="text-2xl font-bold text-primary">{selectedSubmission?.score} <span className="text-sm text-foreground">Points</span></p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="p-6 space-y-8">
+                  {currentExam?.questions.map((q, idx) => {
+                     const justs = typeof selectedSubmission?.justifications === 'string' ? JSON.parse(selectedSubmission.justifications) : selectedSubmission?.justifications || {};
+                     const studentJust = justs[q.id];
+                     const feedback = aiFeedbacks[`${selectedSubmission?.id}-${q.id}`];
+                     const isValidating = validatingJustification[q.id];
+
+                     return (
+                        <div key={q.id} className="group pb-8 border-b border-border last:border-0 last:pb-0">
+                           <div className="flex items-start gap-4">
+                              <span className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground mt-0.5">{idx + 1}</span>
+                              <div className="flex-1 space-y-4">
+                                 <div>
+                                    <h4 className="font-bold text-foreground mb-1">{q.question}</h4>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                                       {q.section}
+                                    </span>
+                                 </div>
+
+                                 {q.requiresJustification ? (
+                                    <div className="bg-muted/30 rounded-xl border border-border p-4">
+                                       <div className="flex items-center justify-between mb-4">
+                                          <div className="flex items-center gap-2">
+                                             <SparklesIcon className="w-4 h-4 text-amber-500" />
+                                             <span className="text-xs font-bold text-foreground">Justification</span>
+                                          </div>
+                                          <Button
+                                             size="sm"
+                                             disabled={isValidating || !studentJust}
+                                             onClick={() => validateAI(q.id, q.question, q.correctAnswer, studentJust)}
+                                             className="h-8 text-xs font-bold bg-primary text-primary-foreground"
+                                          >
+                                             {isValidating ? <RefreshCw className="w-3 h-3 animate-spin mr-2" /> : <div className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Validate</div>}
+                                          </Button>
+                                       </div>
+                                       <p className="text-sm text-muted-foreground p-3 bg-background rounded-lg border border-border italic mb-4">
+                                          "{studentJust || "No justification provided."}"
+                                       </p>
+
+                                       {feedback && (
+                                          <div className={`p-4 rounded-lg border flex items-start gap-3 animation-fade-in ${feedback.isValid ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                                             {feedback.isValid ? <Check className="w-4 h-4 text-emerald-600 mt-0.5" /> : <XIcon className="w-4 h-4 text-red-600 mt-0.5" />}
+                                             <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                   <span className="text-xs font-bold text-foreground">AI Analysis</span>
+                                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-background border border-border font-mono">{feedback.score}/10</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground hover:text-foreground transition-colors">{feedback.feedback}</p>
+                                             </div>
+                                          </div>
+                                       )}
+                                    </div>
+                                 ) : (
+                                    <p className="text-xs text-muted-foreground italic pl-1">No justification required.</p>
                                  )}
                               </div>
-                              {/* Section Breakdown Mini Pills */}
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                 {Object.entries(scores || {}).map(([s, val]) => (
-                                    <div key={s} className="flex justify-between items-center px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest dark:bg-slate-800 dark:border-slate-700">
-                                       <span>{s}:</span>
-                                       <span className="text-emerald-500 ml-2">{val as any} / {currentExam?.sectionsConfig?.find(sc => sc.name === s)?.pickCount || "?"}</span>
-                                    </div>
-                                 ))}
-                              </div>
                            </div>
-                        </td>
-                        <td className="px-10 py-8 text-right">
-                           <Button variant="ghost" size="sm" onClick={() => handleReschedule(r.id, r.studentName)} className="rounded-2xl h-12 px-6 text-red-500 hover:bg-red-50 hover:text-red-600 font-black uppercase text-[10px] tracking-widest opacity-0 group-hover:opacity-100 transition-all active:scale-95">
-                              <CalendarX className="w-4 h-4 mr-2" />
-                              Reset Entry
-                           </Button>
-                        </td>
-                      </tr>
-                    );
+                        </div>
+                     );
                   })}
-               </tbody>
-            </table>
-         </div>
-      </section>
-
-      {/* Analysis Modal */}
-      <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] p-0 border-none shadow-2xl">
-          <div className="bg-slate-50 dark:bg-slate-950 p-10 border-b">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                   <div className="h-16 w-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-2xl">
-                      {selectedSubmission?.studentName.charAt(0)}
-                   </div>
-                   <div>
-                      <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">{selectedSubmission?.studentName}</h2>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedSubmission?.usn} • Evaluation Report</p>
-                   </div>
-                </div>
-                <div className="text-right">
-                   <p className="text-4xl font-black text-slate-900 dark:text-white">{selectedSubmission?.score}</p>
-                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Points Secured</p>
-                </div>
-             </div>
-          </div>
-
-          <div className="p-10 space-y-10">
-             {currentExam?.questions.map((q, idx) => {
-                const justs = typeof selectedSubmission?.justifications === 'string' ? JSON.parse(selectedSubmission.justifications) : selectedSubmission?.justifications || {};
-                const studentJust = justs[q.id];
-                const feedback = aiFeedbacks[`${selectedSubmission?.id}-${q.id}`];
-                const isValidating = validatingJustification[q.id];
-
-                return (
-                   <div key={q.id} className="group relative">
-                      <div className="flex items-start gap-8">
-                         <div className="flex flex-col items-center gap-2 pt-1">
-                            <span className="text-[10px] font-black text-slate-300">Q{idx + 1}</span>
-                            <div className="w-px flex-1 bg-slate-100 dark:bg-slate-800" />
-                         </div>
-                         <div className="flex-1 space-y-6 pb-10 border-b border-slate-50 dark:border-slate-800">
-                            <div>
-                               <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">{q.question}</h4>
-                               <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded dark:bg-slate-800">Section: {q.section}</span>
-                            </div>
-
-                            {q.requiresJustification ? (
-                               <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm dark:bg-slate-900/50 dark:border-slate-800">
-                                  <div className="flex items-center justify-between mb-6">
-                                     <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                                           <SparklesIcon className="w-4 h-4 text-amber-600" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Student Justification</span>
-                                     </div>
-                                     <Button 
-                                       size="sm" 
-                                       disabled={isValidating || !studentJust}
-                                       onClick={() => validateAI(q.id, q.question, q.correctAnswer, studentJust)}
-                                       className="h-9 px-6 rounded-xl bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 transition-all hover:text-slate-950"
-                                     >
-                                        {isValidating ? <RefreshCw className="w-3 h-3 animate-spin mr-2" /> : <CheckCircle2 className="w-3 h-3 mr-2" />}
-                                        {feedback ? "Re-Analyze" : "AI Validate"}
-                                     </Button>
-                                  </div>
-                                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 italic mb-6 leading-relaxed">
-                                     "{studentJust || "No justification provided by student."}"
-                                  </p>
-
-                                  {feedback && (
-                                     <div className={`p-6 rounded-2xl border flex items-start gap-4 animate-in slide-in-from-top-2 duration-500 ${feedback.isValid ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20' : 'bg-red-50 border-red-100 dark:bg-red-500/5 dark:border-red-500/20'}`}>
-                                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${feedback.isValid ? 'bg-emerald-500 text-slate-950' : 'bg-red-500 text-white'}`}>
-                                           {feedback.isValid ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
-                                        </div>
-                                        <div>
-                                           <div className="flex items-center gap-3 mb-1">
-                                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">AI Feedback</span>
-                                              <span className="text-[10px] font-black text-slate-400 opacity-30">•</span>
-                                              <span className="text-[10px] font-black text-slate-900 dark:text-white">Reasoning Score: {feedback.score}/10</span>
-                                           </div>
-                                           <p className={`text-xs font-bold ${feedback.isValid ? 'text-emerald-700' : 'text-red-700'}`}>{feedback.feedback}</p>
-                                        </div>
-                                     </div>
-                                  )}
-                               </div>
-                            ) : (
-                               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">No justification required for this item</p>
-                            )}
-                         </div>
-                      </div>
-                   </div>
-                );
-             })}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+               </div>
+            </DialogContent>
+         </Dialog>
+      </div>
+   );
 }
