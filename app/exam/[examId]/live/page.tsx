@@ -97,6 +97,8 @@ export default function LiveExamPage() {
     setIsSubmitting(true);
     setSubmitted(true);
 
+    const actualViolations = finalViolations !== undefined ? finalViolations : violations;
+
     if (isTimeout) {
       toast.info("Time is up! Your exam is being submitted automatically.", {
         duration: 5000,
@@ -154,7 +156,7 @@ export default function LiveExamPage() {
       class: student.class,
       section: student.section,
       score,
-      violations,
+      violations: actualViolations,
       sectionScores: sectionalResults,
       justifications,
       totalMarks: exam.totalMarks,
@@ -175,7 +177,7 @@ export default function LiveExamPage() {
         totalMarks: exam.totalMarks,
         correct,
         wrong: shuffledQuestions.length - correct,
-        violations,
+        violations: actualViolations,
         sectionScores: sectionalResults,
       }),
     );
@@ -202,7 +204,7 @@ export default function LiveExamPage() {
       toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/3`, {
         description: "Please maintain proper exam conduct.",
       });
-      if (next >= 3) submitExam();
+      if (next >= 3) submitExam(false, next);
       return next;
     });
   }, [submitted, submitExam]);
@@ -235,7 +237,7 @@ export default function LiveExamPage() {
         setViolations((v) => {
           const next = v + 1;
           toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
-          if (next >= 3) submitExam();
+          if (next >= 3) submitExam(false, next);
           return next;
         });
       }

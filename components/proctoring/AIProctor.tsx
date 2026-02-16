@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState,memo } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface AIProctorProps {
   onViolation: (reason: string, points: number) => void;
   isFinished?: boolean;
 }
- function AIProctor ({ onViolation, isFinished }: AIProctorProps) {
+
+function AIProctor({ onViolation, isFinished }: AIProctorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
@@ -19,12 +20,17 @@ interface AIProctorProps {
 
   const addRisk = (points: number, reason: string) => {
     onViolationRef.current?.(reason, points);
-    setActiveViolations(prev => {
+
+    setActiveViolations((prev) => {
       if (prev.includes(reason)) return prev;
       const next = [...prev, reason];
+
       setTimeout(() => {
-        setActiveViolations(current => current.filter(r => r !== reason));
+        setActiveViolations((current) =>
+          current.filter((r) => r !== reason)
+        );
       }, 3000);
+
       return next;
     });
   };
@@ -36,12 +42,16 @@ interface AIProctorProps {
     let audioContext: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let dataArray: Uint8Array<ArrayBuffer>;
-    let isInitialized = false;
+
     let isClosed = false;
+    let isInitialized = false;
 
     let lipOpenFrames = 0;
     let headTurnFrames = 0;
-    let loudAudioFrames = 0;
+
+    let speechStartTime: number | null = null;
+    let lipRecentlyActive = false;
+
     const loadScript = (src: string) =>
       new Promise((resolve) => {
         const script = document.createElement("script");
@@ -52,7 +62,6 @@ interface AIProctorProps {
       });
 
     const initialize = async () => {
-      // Load MediaPipe from CDN
       await loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
       );
@@ -74,6 +83,7 @@ interface AIProctorProps {
 
         faceMesh.onResults((results: any) => {
           if (isClosed) return;
+
           if (!results.multiFaceLandmarks?.length) {
             addRisk(25, "Face not detected");
             return;
@@ -84,13 +94,11 @@ interface AIProctorProps {
           detectHeadTurn(landmarks);
         });
 
-        // Add a small delay to ensure WASM is truly parsed
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
         isInitialized = true;
       }
 
       try {
-        // Get Camera + Mic
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: 640,
@@ -105,7 +113,6 @@ interface AIProctorProps {
           await videoRef.current.play();
         }
 
-        // Setup Audio Analyzer
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
@@ -116,31 +123,37 @@ interface AIProctorProps {
 
         source.connect(analyser);
 
-        const detectLoop = async () => {
-          if (isClosed) return;
-          
-          if (videoRef.current && videoRef.current.readyState >= 2 && isInitialized && faceMesh) {
-            try {
-              await faceMesh.send({ image: videoRef.current });
-            } catch (err) {
-              console.warn("MediaPipe send error (retrying):", err);
-              // Avoid spamming if it really fails
-            }
-          }
-          
-          if (analyser) {
-            monitorAudio();
-          }
-          if (canvasRef.current && analyser) {
-            drawAudioGraph(analyser, dataArray);
-          }
-          animationFrameId = requestAnimationFrame(detectLoop);
-        };
-
         detectLoop();
       } catch (err) {
-        console.error("Failed to access media devices:", err);
+        console.error("Proctoring initialization failed:", err);
       }
+    };
+
+    const detectLoop = async () => {
+      if (isClosed) return;
+
+      if (
+        videoRef.current &&
+        videoRef.current.readyState >= 2 &&
+        isInitialized &&
+        faceMesh
+      ) {
+        try {
+          await faceMesh.send({ image: videoRef.current });
+        } catch (e) {
+          console.warn("FaceMesh send error:", e);
+        }
+      }
+
+      if (analyser) {
+        monitorAudio();
+      }
+
+      if (canvasRef.current && analyser) {
+        drawAudioGraph(analyser, dataArray);
+      }
+
+      animationFrameId = requestAnimationFrame(detectLoop);
     };
 
     const detectLipMovement = (landmarks: any) => {
@@ -150,6 +163,8 @@ interface AIProctorProps {
 
       if (distance > 0.02) {
         lipOpenFrames++;
+        lipRecentlyActive = true;
+        setTimeout(() => (lipRecentlyActive = false), 2000);
       } else {
         lipOpenFrames = 0;
       }
@@ -184,23 +199,71 @@ interface AIProctorProps {
       if (!analyser) return;
 
       analyser.getByteFrequencyData(dataArray);
-      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
 
-      if (avg > 60) {
-        loudAudioFrames++;
-      } else {
-        loudAudioFrames = 0;
+      // 1. Speech Band (approx 400Hz - 2kHz)
+      let speechEnergy = 0;
+      for (let i = 10; i < 45; i++) {
+        speechEnergy += dataArray[i];
       }
+      speechEnergy /= 35;
 
-      if (loudAudioFrames > 15) {
-        addRisk(20, "Sustained loud audio");
-        loudAudioFrames = 0;
+      // 2. High Frequency / Noise Band (Upper range)
+      // Mechanical noises like footsteps or chair scrapes usually have significant energy here too
+      let highFreqNoise = 0;
+      for (let i = 80; i < 120; i++) {
+        highFreqNoise += dataArray[i];
+      }
+      highFreqNoise /= 40;
+
+      // 3. Overall Volume
+      let totalEnergy = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        totalEnergy += dataArray[i];
+      }
+      totalEnergy /= dataArray.length;
+
+      const now = Date.now();
+
+      // Ratio logic: Human speech is usually harmonically rich in the mid-band
+      // Broadband noise (footsteps, thumps) will have highFreqNoise move in tandem with speechEnergy
+      const speechRatio = speechEnergy / (highFreqNoise + 1);
+
+      // Voice Detection Criteria:
+      // - speechEnergy is loud enough (> 65)
+      // - speechRatio is high (> 1.5) indicating speech dominance over background hiss/thumps
+      // - totalEnergy is not EXTREME (which would be a non-speech bang)
+      const isVoiceLike = speechEnergy > 65 && speechRatio > 1.5 && totalEnergy < 170;
+
+      if (isVoiceLike) {
+        if (!speechStartTime) {
+          speechStartTime = now;
+        }
+
+        // Must sustain for 2 seconds to be counted as actual speech
+        if (now - speechStartTime > 2000) {
+          if (lipRecentlyActive) {
+            addRisk(25, "Speech detected with lip movement");
+          } else {
+            addRisk(1, "Background speech detected");
+          }
+          speechStartTime = null;
+        }
+      } else {
+        // Drop threshold slightly for "tailing" sounds
+        if (speechEnergy < 45 || speechRatio < 1.2) {
+          speechStartTime = null;
+        }
       }
     };
 
-    const drawAudioGraph = (analyser: AnalyserNode, dataArray: Uint8Array<ArrayBuffer>) => {
+
+    const drawAudioGraph = (
+      analyser: AnalyserNode,
+      dataArray: Uint8Array<ArrayBuffer>
+    ) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
@@ -214,7 +277,12 @@ interface AIProctorProps {
       for (let i = 0; i < bufferLength; i++) {
         const barHeight = dataArray[i];
         ctx.fillStyle = `rgb(${barHeight + 100},50,50)`;
-        ctx.fillRect(x, canvas.height - barHeight / 2, barWidth, barHeight / 2);
+        ctx.fillRect(
+          x,
+          canvas.height - barHeight / 2,
+          barWidth,
+          barHeight / 2
+        );
         x += barWidth + 1;
       }
     };
@@ -224,22 +292,11 @@ interface AIProctorProps {
     return () => {
       isClosed = true;
       cancelAnimationFrame(animationFrameId);
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      stream?.getTracks().forEach((t) => t.stop());
       audioContext?.close();
-      if (faceMesh) {
-        faceMesh.close().catch(() => {});
-      }
+      faceMesh?.close?.();
     };
   }, []);
-
-  useEffect(() => {
-    if (isFinished) {
-      // Trigger cleanup early if finished
-      console.log("AIProctor: Exam finished, cleaning up...");
-    }
-  }, [isFinished]);
 
   return (
     <div className="flex flex-col gap-4 items-center p-4 bg-card border border-border rounded-xl shadow-sm">
@@ -251,14 +308,14 @@ interface AIProctorProps {
           playsInline
           className="w-full max-w-[320px] rounded-lg border-2 border-primary/20 aspect-video object-cover"
         />
-        <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
-          Live Proctoring Active
-        </div>
-        
+
         {activeViolations.length > 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 backdrop-blur-[2px] rounded-lg">
             {activeViolations.map((reason, i) => (
-              <div key={i} className="flex items-center gap-2 bg-destructive text-destructive-foreground px-3 py-1 rounded-md text-xs font-bold animate-bounce mb-2">
+              <div
+                key={i}
+                className="flex items-center gap-2 bg-destructive text-white px-3 py-1 rounded-md text-xs font-bold animate-bounce mb-2 shadow-lg"
+              >
                 <AlertTriangle className="w-3 h-3" />
                 {reason}
               </div>
@@ -269,19 +326,18 @@ interface AIProctorProps {
 
       <div className="w-full max-w-[320px] space-y-2">
         <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          <span>Audio Frequency</span>
-          <span className="text-primary">Live</span>
+          <span>Audio Spectrum</span>
+          <span className="text-primary animate-pulse">Monitoring</span>
         </div>
         <canvas
           ref={canvasRef}
           width={320}
           height={60}
-          className="w-full bg-muted/30 rounded-lg border border-border"
+          className="w-full bg-muted/30 rounded-lg border border-border overflow-hidden"
         />
       </div>
     </div>
   );
 }
 
-
-export default memo(AIProctor)
+export default memo(AIProctor);
