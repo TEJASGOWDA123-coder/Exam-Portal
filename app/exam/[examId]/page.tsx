@@ -186,20 +186,29 @@ export default function ExamEntry() {
                   className="bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-600/20"
                   onClick={() => {
                     const host = window.location.host;
-                    window.location.href = `seb://${host}/api/seb/config/${examId}`;
+                    // Using sebs:// for secure HTTPS connection as required by Vercel
+                    window.location.href = `sebs://${host}/api/seb/config/${examId}`;
                   }}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Launch in SEB
                 </Button>
-                <div className="flex items-center justify-between gap-4 mt-2">
+                <div className="flex items-center justify-between gap-3 mt-2">
+                   <a 
+                    href={`/api/seb/config/${examId}`} 
+                    download
+                    className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+                   >
+                     <Download className="w-3 h-3" />
+                     Download Config
+                   </a>
                    <a 
                     href="https://safeexambrowser.org/download_en.html" 
                     target="_blank" 
                     rel="noreferrer"
-                    className="flex-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+                    className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
                    >
-                     <Download className="w-3 h-3" />
+                     <ExternalLink className="w-3 h-3" />
                      Install SEB
                    </a>
                 </div>
