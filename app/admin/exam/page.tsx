@@ -42,9 +42,9 @@ const ExamPage = () => {
     };
 
     const copySebLink = (id: string) => {
-        // seb:// link triggers SEB browser directly
+        // sebs:// link triggers SEB browser directly
         const host = window.location.host;
-        const link = `seb://${host}/api/seb/config/${id}`;
+        const link = `sebs://${host}/api/seb/config/${id}`;
         navigator.clipboard.writeText(link);
         toast.success("SEB Launch link copied!", {
             description: "Students can click this to open the exam directly in SEB."

@@ -48,6 +48,11 @@ export default function ExamEntry() {
     }
 
     try {
+      if (exam?.sebConfigId && !isInSeb) {
+        toast.error("Security violation: This exam must be taken in Safe Exam Browser.");
+        return;
+      }
+
       // Direct submission check
       const checkResp = await fetch(`/api/results/my-result?examId=${examId}&usn=${usn.trim()}`);
       if (checkResp.ok) {
@@ -93,6 +98,8 @@ export default function ExamEntry() {
     }
   }, [student, examId, router]);
 
+  const isEntryDisabled = exam?.sebConfigId && !isInSeb;
+
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-10 relative">
       <div className="absolute top-4 right-4 z-10">
@@ -119,6 +126,7 @@ export default function ExamEntry() {
                   onChange={(e) => setUsn(e.target.value)}
                   placeholder="e.g. 1AB21CS001"
                   className="mt-1.5"
+                  disabled={!!isEntryDisabled}
                 />
               </div>
               <div className="col-span-2">
@@ -129,6 +137,7 @@ export default function ExamEntry() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your full name"
                   className="mt-1.5"
+                  disabled={!!isEntryDisabled}
                 />
               </div>
               <div className="col-span-2">
@@ -140,6 +149,7 @@ export default function ExamEntry() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="mt-1.5"
+                  disabled={!!isEntryDisabled}
                 />
               </div>
               <div>
@@ -150,6 +160,7 @@ export default function ExamEntry() {
                   onChange={(e) => setClassName(e.target.value)}
                   placeholder="e.g. 6th"
                   className="mt-1.5"
+                  disabled={!!isEntryDisabled}
                 />
               </div>
               <div>
@@ -160,11 +171,12 @@ export default function ExamEntry() {
                   onChange={(e) => setSection(e.target.value)}
                   placeholder="e.g. A"
                   className="mt-1.5"
+                  disabled={!!isEntryDisabled}
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full font-semibold h-11 mt-4">
-              Continue to Instructions
+            <Button type="submit" className="w-full font-semibold h-11 mt-4" disabled={!!isEntryDisabled}>
+              {isEntryDisabled ? "SEB Required to Proceed" : "Continue to Instructions"}
             </Button>
           </form>
         </div>
