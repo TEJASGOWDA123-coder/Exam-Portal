@@ -19,6 +19,7 @@ export const students = sqliteTable("students", {
   email: text("email").notNull(),
   usn: text("usn").notNull(),
   class: text("class").notNull(),
+  year: text("year").notNull(),
   section: text("section").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -53,8 +54,10 @@ export const exams = sqliteTable("exams", {
   status: text("status", { enum: ["active", "upcoming", "completed"] }).notNull().default("upcoming"),
   proctoringEnabled: integer("proctoring_enabled").notNull().default(0), // 0 for disabled, 1 for enabled
   showResults: integer("show_results").notNull().default(1), // 0 for hidden, 1 for visible
-  sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number }[]
+  sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number, duration: number }[]
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
+  positiveMarks: integer("positive_marks").notNull().default(1),
+  negativeMarks: text("negative_marks").notNull().default("0"), // Using text to allow decimals like "0.25"
   generatedQuestions: text("generated_questions"), // JSON string for specific student variants
   sebConfigId: text("seb_config_id"), // Reference to seb_configs.id
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
@@ -99,10 +102,12 @@ export const submissions = sqliteTable("submissions", {
   usn: text("usn").notNull(),
   email: text("email").notNull(),
   class: text("class").notNull(),
+  year: text("year").notNull(),
   section: text("section").notNull(),
   score: integer("score").notNull(),
   violations: integer("violations").notNull().default(0),
   sectionScores: text("section_scores"), // JSON string: { [sectionName: string]: number }
+  answers: text("answers"), // JSON string: { [questionId: string]: any }
   justifications: text("justifications"), // JSON string: { [questionId: string]: string }
   submittedAt: integer("submitted_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => {

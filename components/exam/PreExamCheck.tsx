@@ -28,11 +28,11 @@ export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled =
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
-    checkMedia();
+    if (proctoringEnabled) {
+      checkMedia();
+    }
     checkNetwork();
-    // We don't stop tracks here anymore because we pass the stream to the parent
-    // The parent (LiveExamPage) will handle cleanup on final unmount
-  }, []);
+  }, [proctoringEnabled]);
 
   const checkMedia = async () => {
     try {
@@ -129,8 +129,8 @@ export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled =
               )}
             </div>
 
-            <Button 
-              className="w-full h-12 mt-8 font-bold text-md group" 
+            <Button
+              className="w-full h-12 mt-8 font-bold text-md group"
               disabled={proctoringEnabled && !allPassed}
               onClick={() => onProceed(stream)}
             >

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sebConfigs } from "@/lib/db/seb_schema";
+import { sebConfigs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 // GET all configs
@@ -49,7 +49,7 @@ export async function PATCH(req: Request) {
 
     // Set all to inactive first if we want only one active at a time (simulation)
     if (isActive) {
-       await db.update(sebConfigs).set({ isActive: false });
+      await db.update(sebConfigs).set({ isActive: false });
     }
 
     await db.update(sebConfigs)

@@ -40,8 +40,11 @@ export default function CreateExam() {
    const [proctoringEnabled, setProctoringEnabled] = useState(false);
    const [showResults, setShowResults] = useState(true);
    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
+   const [positiveMarks, setPositiveMarks] = useState("1");
+   const [negativeMarks, setNegativeMarks] = useState("0");
    const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
    const [uploadingSeb, setUploadingSeb] = useState(false);
+   const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
    const { addExam } = useExam();
    const router = useRouter();
    const { data: session } = useSession();
@@ -136,6 +139,9 @@ export default function CreateExam() {
          proctoringEnabled,
          showResults,
          sebConfigId,
+         positiveMarks: parseInt(positiveMarks) || 1,
+         negativeMarks: negativeMarks || "0",
+         sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
          questions: [],
       };
       try {
@@ -175,8 +181,9 @@ export default function CreateExam() {
                <form onSubmit={handleSubmit}>
                   <Card className="p-6 rounded-2xl shadow-card border border-border bg-card">
                      <Tabs defaultValue="details" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
+                        <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50 p-1 rounded-xl">
                            <TabsTrigger value="details" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Exam Details</TabsTrigger>
+                           <TabsTrigger value="sections" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Sections</TabsTrigger>
                            <TabsTrigger value="settings" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm">Settings</TabsTrigger>
                         </TabsList>
 
@@ -245,6 +252,112 @@ export default function CreateExam() {
                                  />
                               </div>
                            </div>
+
+                           <div className="grid grid-cols-2 gap-6 p-4 rounded-xl border border-primary/10 bg-primary/5 mt-4">
+                              <div className="space-y-2">
+                                 <Label htmlFor="pos-marks" className="text-emerald-600 font-bold">Positive Marking (per question)</Label>
+                                 <Input
+                                    id="pos-marks"
+                                    type="number"
+                                    value={positiveMarks}
+                                    onChange={(e) => setPositiveMarks(e.target.value)}
+                                    placeholder="1"
+                                    className="h-11 border-emerald-200 focus:border-emerald-500"
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <Label htmlFor="neg-marks" className="text-destructive font-bold">Negative Marking (e.g. 0.25)</Label>
+                                 <Input
+                                    id="neg-marks"
+                                    type="number"
+                                    step="0.01"
+                                    value={negativeMarks}
+                                    onChange={(e) => setNegativeMarks(e.target.value)}
+                                    placeholder="0"
+                                    className="h-11 border-destructive/20 focus:border-destructive"
+                                 />
+                              </div>
+                              <p className="col-span-2 text-[10px] text-muted-foreground italic">
+                                 * Negative marks should be entered as a positive number (e.g., 0.25 will deduct 0.25 points for wrong answers).
+                              </p>
+                           </div>
+                        </TabsContent>
+
+                        <TabsContent value="sections" className="space-y-6">
+                           <div className="rounded-xl bg-primary/5 p-4 border border-primary/10">
+                              <div className="flex items-center gap-2 mb-2 text-primary">
+                                 <Sparkles className="h-4 w-4" />
+                                 <h4 className="font-bold text-sm">Section Control</h4>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                 Define the logical sections of your exam.
+                              </p>
+                           </div>
+
+                           <div className="space-y-3">
+                              {sectionsConfig.map((sec, idx) => (
+                                 <div key={idx} className="flex items-end gap-3 p-4 bg-muted/20 rounded-xl border border-border animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex-1 space-y-2">
+                                       <Label className="text-xs">Section Name</Label>
+                                       <Input
+                                          value={sec.name}
+                                          onChange={(e) => {
+                                             const next = [...sectionsConfig];
+                                             next[idx].name = e.target.value;
+                                             setSectionsConfig(next);
+                                          }}
+                                          className="h-9 bg-background"
+                                       />
+                                    </div>
+                                    <div className="w-24 space-y-2">
+                                       <Label className="text-xs">Pick Count</Label>
+                                       <Input
+                                          type="number"
+                                          value={sec.pickCount}
+                                          onChange={(e) => {
+                                             const next = [...sectionsConfig];
+                                             next[idx].pickCount = parseInt(e.target.value) || 0;
+                                             setSectionsConfig(next);
+                                          }}
+                                          className="h-9 bg-background text-center"
+                                       />
+                                    </div>
+                                    <div className="w-24 space-y-2">
+                                       <Label className="text-xs">Time (Min)</Label>
+                                       <Input
+                                          type="number"
+                                          value={sec.duration}
+                                          onChange={(e) => {
+                                             const next = [...sectionsConfig];
+                                             next[idx].duration = parseInt(e.target.value) || 0;
+                                             setSectionsConfig(next);
+                                          }}
+                                          className="h-9 bg-background text-center"
+                                       />
+                                    </div>
+                                    <Button
+                                       variant="ghost"
+                                       size="icon"
+                                       type="button"
+                                       className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                       onClick={() => setSectionsConfig(sectionsConfig.filter((_, i) => i !== idx))}
+                                    >
+                                       <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                 </div>
+                              ))}
+
+                              <Button
+                                 type="button"
+                                 variant="outline"
+                                 className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-primary hover:border-primary/50"
+                                 onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10, duration: 5 }])}
+                              >
+                                 <Plus className="w-4 h-4 mr-2" />
+                                 Add Section Configuration
+                              </Button>
+                           </div>
+                           <p className="text-[10px] text-muted-foreground mt-2 italic">* Sectional durations enforce strict time limits per section. Total exam time should consider these individual limits.</p>
                         </TabsContent>
 
                         <TabsContent value="settings" className="space-y-6">
@@ -276,8 +389,8 @@ export default function CreateExam() {
                                  <Label className="text-base font-bold">Safe Exam Browser (SEB)</Label>
                               </div>
                               <div className="flex gap-2">
-                                 <select 
-                                    value={sebConfigId || ""} 
+                                 <select
+                                    value={sebConfigId || ""}
                                     onChange={(e) => setSebConfigId(e.target.value || null)}
                                     className="flex-1 h-11 px-4 rounded-xl bg-muted border border-border text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all cursor-pointer"
                                  >
@@ -287,18 +400,18 @@ export default function CreateExam() {
                                     ))}
                                  </select>
                                  <div className="relative">
-                                    <input 
-                                       type="file" 
-                                       accept=".seb" 
-                                       id="create-seb-upload" 
-                                       className="hidden" 
+                                    <input
+                                       type="file"
+                                       accept=".seb"
+                                       id="create-seb-upload"
+                                       className="hidden"
                                        onChange={handleSebUpload}
                                        disabled={uploadingSeb}
                                     />
-                                    <Button 
-                                       asChild 
-                                       variant="outline" 
-                                       size="icon" 
+                                    <Button
+                                       asChild
+                                       variant="outline"
+                                       size="icon"
                                        className="h-11 w-11 rounded-xl border-dashed"
                                        disabled={uploadingSeb}
                                     >

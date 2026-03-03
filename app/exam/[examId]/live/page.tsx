@@ -82,9 +82,29 @@ export default function LiveExamPage() {
     return selected;
   }, [exam]);
 
+  const sectionGroups = useMemo(() => {
+    const groups: Record<string, { startIndex: number; count: number; questions: any[] }> = {};
+    shuffledQuestions.forEach((q, idx) => {
+      const s = q.section || "General";
+      if (!groups[s]) {
+        groups[s] = { startIndex: idx, count: 0, questions: [] };
+      }
+      groups[s].count++;
+      groups[s].questions.push({ ...q, globalIndex: idx });
+    });
+    return groups;
+  }, [shuffledQuestions]);
+
+  const orderedSectionNames = useMemo(() => Object.keys(sectionGroups), [sectionGroups]);
+
   const [currentQ, setCurrentQ] = useState(0);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+
+  const activeSection = orderedSectionNames[currentSectionIndex] || "General";
   const [answers, setAnswers] = useState<Record<string, number | number[] | string>>({});
   const [justifications, setJustifications] = useState<Record<string, string>>({});
+  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
+  const [visited, setVisited] = useState<Set<string>>(new Set());
   const [violations, setViolations] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -133,7 +153,7 @@ export default function LiveExamPage() {
 
     const events = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
     events.forEach(event => document.addEventListener(event, handleFullscreenChange));
-    
+
     return () => {
       events.forEach(event => document.removeEventListener(event, handleFullscreenChange));
     };
@@ -174,9 +194,13 @@ export default function LiveExamPage() {
       });
     }
 
-    let correct = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
     let totalObtained = 0;
     const sectionalResults: Record<string, number> = {};
+
+    const posMarks = exam.positiveMarks ?? 1;
+    const negMarks = parseFloat(exam.negativeMarks ?? "0");
 
     shuffledQuestions.forEach((q) => {
       const ans = answers[q.id];
@@ -207,14 +231,19 @@ export default function LiveExamPage() {
       }
 
       if (isCorrect) {
-        correct++;
-        const m = q.marks || 1;
-        totalObtained += m;
-        sectionalResults[section] += m;
+        correctCount++;
+        const marksEarned = posMarks;
+        totalObtained += marksEarned;
+        sectionalResults[section] = (sectionalResults[section] || 0) + marksEarned;
+      } else if (ans !== undefined) {
+        // Only deduct if an answer was provided (not for skipped)
+        wrongCount++;
+        totalObtained -= negMarks;
+        sectionalResults[section] = (sectionalResults[section] || 0) - negMarks;
       }
     });
 
-    const score = totalObtained;
+    const score = Math.max(0, totalObtained); // Typically scores don't go below 0
 
     const success = await addResult({
       id: `r-${Date.now()}`,
@@ -223,10 +252,12 @@ export default function LiveExamPage() {
       usn: student.usn,
       email: student.email,
       class: student.class,
+      year: student.year,
       section: student.section,
       score,
       violations: actualViolations,
       sectionScores: sectionalResults,
+      answers,
       justifications,
       totalMarks: exam.totalMarks,
       submittedAt: new Date(),
@@ -244,10 +275,12 @@ export default function LiveExamPage() {
       JSON.stringify({
         score,
         totalMarks: exam.totalMarks,
-        correct,
-        wrong: shuffledQuestions.length - correct,
+        correct: correctCount,
+        wrong: wrongCount,
         violations: actualViolations,
         sectionScores: sectionalResults,
+        answers,
+        questions: shuffledQuestions, // Pass full questions for detailed view
       }),
     );
 
@@ -277,6 +310,81 @@ export default function LiveExamPage() {
     });
   }, [submitted]);
 
+  const markForReviewAndNext = useCallback(() => {
+    const qId = shuffledQuestions[currentQ].id;
+    setMarkedForReview(prev => {
+      const next = new Set(prev);
+      if (next.has(qId)) next.delete(qId);
+      else next.add(qId);
+      return next;
+    });
+    if (currentQ < shuffledQuestions.length - 1) {
+      const nextIndex = currentQ + 1;
+      setCurrentQ(nextIndex);
+      setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
+    }
+  }, [currentQ, shuffledQuestions]);
+
+  const clearResponse = useCallback(() => {
+    const qId = shuffledQuestions[currentQ].id;
+    setAnswers(prev => {
+      const next = { ...prev };
+      delete next[qId];
+      return next;
+    });
+    setMarkedForReview(prev => {
+      const next = new Set(prev);
+      next.delete(qId);
+      return next;
+    });
+  }, [currentQ, shuffledQuestions]);
+
+  const handleSectionTimeUp = useCallback(() => {
+    if (currentSectionIndex < orderedSectionNames.length - 1) {
+      const nextSectionName = orderedSectionNames[currentSectionIndex + 1];
+      const nextIndex = sectionGroups[nextSectionName].startIndex;
+      setCurrentSectionIndex(v => v + 1);
+      setCurrentQ(nextIndex);
+      setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
+      toast.success(`Section timeout: Moving to ${nextSectionName}`);
+    } else {
+      submitExam(true);
+    }
+  }, [currentSectionIndex, orderedSectionNames, sectionGroups, shuffledQuestions, submitExam]);
+
+  const navigateTo = useCallback((index: number) => {
+    const targetQ = shuffledQuestions[index];
+    const targetSection = targetQ?.section || "General";
+    if (targetSection !== activeSection) {
+      toast.warning("You cannot access questions outside the current section.");
+      return;
+    }
+    setCurrentQ(index);
+    setVisited(prev => new Set(prev).add(shuffledQuestions[index].id));
+  }, [shuffledQuestions, activeSection]);
+
+  const saveAndNext = useCallback(() => {
+    const sectionEnd = sectionGroups[activeSection].startIndex + sectionGroups[activeSection].count - 1;
+
+    if (currentQ < sectionEnd) {
+      const nextIndex = currentQ + 1;
+      setCurrentQ(nextIndex);
+      setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
+    } else {
+      if (currentSectionIndex < orderedSectionNames.length - 1) {
+        // Move to next section
+        const nextSectionName = orderedSectionNames[currentSectionIndex + 1];
+        const nextIndex = sectionGroups[nextSectionName].startIndex;
+        setCurrentSectionIndex(v => v + 1);
+        setCurrentQ(nextIndex);
+        setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
+        toast.success(`Proceeding to section: ${nextSectionName}`);
+      } else {
+        setShowConfirm(true);
+      }
+    }
+  }, [currentQ, currentSectionIndex, orderedSectionNames, sectionGroups, shuffledQuestions, activeSection]);
+
   // Handle violation limit
   useEffect(() => {
     if (violations >= 3 && !submitted && !isSubmitting) {
@@ -286,6 +394,11 @@ export default function LiveExamPage() {
 
   // Check for existing submission on mount
   useEffect(() => {
+    // Add first question to visited on mount
+    if (shuffledQuestions.length > 0) {
+      setVisited(prev => new Set(prev).add(shuffledQuestions[0].id));
+    }
+
     if (student && examId && !submitted) {
       const checkSubmission = async () => {
         try {
@@ -303,7 +416,7 @@ export default function LiveExamPage() {
       };
       checkSubmission();
     }
-  }, [student, examId, router, submitted]);
+  }, [student, examId, router, submitted, shuffledQuestions]);
 
   // Proctoring: tab visibility
   useEffect(() => {
@@ -353,19 +466,7 @@ export default function LiveExamPage() {
     };
   }, [activeStream]);
 
-  const sectionGroups = useMemo(() => {
-    const groups: Record<string, { startIndex: number; count: number; questions: any[] }> = {};
-    shuffledQuestions.forEach((q, idx) => {
-      const s = q.section || "General";
-      if (!groups[s]) {
-        groups[s] = { startIndex: idx, count: 0, questions: [] };
-      }
-      groups[s].count++;
-      groups[s].questions.push({ ...q, globalIndex: idx });
-    });
-    return groups;
-  }, [shuffledQuestions]);
-
+  // sectionGroups logic moved to top
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse">Loading...</div>;
   if (!exam) return <div className="p-20 text-center text-destructive font-bold">Exam not found</div>;
@@ -382,20 +483,20 @@ export default function LiveExamPage() {
 
   if (preCheck) {
     return (
-      <PreExamCheck 
-        examTitle={exam.title} 
+      <PreExamCheck
+        examTitle={exam.title}
         proctoringEnabled={!!exam.proctoringEnabled}
         onProceed={(stream: MediaStream | null) => {
           if (stream) setActiveStream(stream);
           enterFullscreen();
           setPreCheck(false);
-        }} 
+        }}
       />
     );
   }
 
   const question = shuffledQuestions[currentQ];
-  const activeSection = question.section || "General";
+  // activeSection is already defined at top level now
 
   const getSectionProgress = (sectionName: string) => {
     const group = sectionGroups[sectionName];
@@ -405,7 +506,7 @@ export default function LiveExamPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/20 flex flex-col animate-fade-in">
+    <div className="h-screen bg-muted/20 flex flex-col overflow-hidden animate-fade-in">
       <header className="h-20 bg-background border-b border-border shadow-sm sticky top-0 z-[60]">
         <div className="max-w-[1600px] mx-auto h-full px-6 flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -415,10 +516,17 @@ export default function LiveExamPage() {
                 <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   Q{currentQ + 1} / {shuffledQuestions.length}
                 </span>
-                {exam.proctoringEnabled && (
+                {!!exam.proctoringEnabled && (
                   <span className="text-[10px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
                     <div className="w-1 h-1 bg-red-600 rounded-full animate-pulse" />
                     Neural Monitor Active
+                  </span>
+                )}
+                {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined) && (
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-muted-foreground px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className="text-emerald-500 font-black">+{exam.positiveMarks || 1}</span>
+                    <span className="opacity-30">/</span>
+                    <span className="text-destructive font-black">-{exam.negativeMarks || 0}</span>
                   </span>
                 )}
               </div>
@@ -428,7 +536,12 @@ export default function LiveExamPage() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3 bg-muted px-4 py-2 rounded-2xl border border-border">
               <TimerIcon className="w-4 h-4 text-primary" />
-              <Timer durationSeconds={exam.duration * 60} onTimeUp={() => submitExam(true)} />
+              {/* Reset timer per section using key */}
+              <Timer
+                key={activeSection}
+                durationSeconds={(exam.sectionsConfig?.find(s => s.name === activeSection)?.duration || 5) * 60}
+                onTimeUp={handleSectionTimeUp}
+              />
             </div>
             <ModeToggle />
           </div>
@@ -444,8 +557,8 @@ export default function LiveExamPage() {
               return (
                 <button
                   key={name}
-                  onClick={() => setCurrentQ(sectionGroups[name].startIndex)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : "hover:bg-muted text-muted-foreground"}`}
+                  disabled={name !== activeSection}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
                 >
                   <div className="flex flex-col items-start">
                     <span className="text-[8px] font-black uppercase tracking-widest opacity-50">Section</span>
@@ -461,17 +574,22 @@ export default function LiveExamPage() {
         </div>
       </nav>
 
-      <main className="flex-1 max-w-[1600px] mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-        <div className="lg:col-span-8 flex flex-col h-full gap-6">
-          <section className="bg-background rounded-3xl border border-border shadow-card flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden">
+        {/* Main Question Area */}
+        <div className="lg:col-span-8 flex flex-col h-full gap-6 overflow-hidden">
+          <div className="bg-background rounded-3xl border border-border shadow-card flex-1 flex flex-col overflow-hidden relative">
+            {/* Header Info */}
             <div className="px-8 py-4 bg-muted/30 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ClipboardList className="w-4 h-4 text-primary" />
                 <p className="font-bold text-sm text-foreground">{activeSection}</p>
               </div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                {question.type === "mcq" ? "Multiple Choice Question" : question.type === "msq" ? "Multiple Select Question" : "Subjective Question"}
+              </div>
             </div>
 
-            <div className="p-8 flex-1">
+            <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
               <QuestionCard
                 question={question}
                 index={currentQ}
@@ -490,112 +608,127 @@ export default function LiveExamPage() {
                   } else {
                     setAnswers((prev) => ({ ...prev, [question.id]: val }));
                   }
+                  // Auto remove Mark For Review if answered? (Optional, let's keep it for now as per reference)
                 }}
               />
 
-              {/* Fullscreen Recovery Overlay */}
-              {!isFullscreen && !preCheck && !submitted && (
-                <div className="absolute inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300">
-                  <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                    <ShieldAlert className="w-10 h-10 text-red-600 animate-pulse" />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2">FULLSCREEN REQUIRED</h2>
-                  <p className="text-muted-foreground mb-8 max-w-md">
-                    To maintain exam integrity, you must remain in fullscreen mode. Continuing outside fullscreen will result in multiple violations.
-                  </p>
-                  <Button 
-                    size="lg" 
-                    onClick={enterFullscreen}
-                    className="rounded-2xl px-10 font-bold bg-primary hover:scale-105 transition-transform shadow-xl shadow-primary/20"
-                  >
-                    Re-enter Fullscreen
-                  </Button>
-                </div>
-              )}
-
-              {/* SEB Lock Overlay */}
-              {!isSeb && !submitted && (
-                <div className="absolute inset-0 z-[110] bg-slate-950 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
-                  <div className="w-24 h-24 rounded-3xl bg-red-500/10 flex items-center justify-center mb-8 border border-red-500/20">
-                    <Lock className="w-12 h-12 text-red-500" />
-                  </div>
-                  <h2 className="text-4xl font-black text-white mb-4 font-title">Locked: SEB Required</h2>
-                  <p className="text-slate-400 max-w-md mb-10 text-lg font-medium leading-relaxed">
-                    This exam is protected by the <span className="text-white font-bold underline decoration-red-500/50 underline-offset-4">Safe Exam Browser</span>. 
-                    Your current browser does not meet security requirements.
-                  </p>
-                  <div className="flex flex-col gap-4 w-full max-w-xs">
-                    <Button 
-                      variant="outline" 
-                      className="h-14 border-slate-800 text-slate-300 hover:bg-slate-900 rounded-2xl font-bold"
-                      onClick={() => window.location.reload()}
-                    >
-                      Verify Connection
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="text-slate-500 hover:text-slate-300 font-bold"
-                      onClick={() => router.push("/admin/dashboard")}
-                    >
-                      Return to Dashboard
-                    </Button>
-                  </div>
-                  <div className="mt-16 flex items-center gap-2 text-slate-700 bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800/50">
-                    <ShieldCheck className="w-3 h-3" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">
-                      Security Protocol Active
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Primary Navigation Buttons - Inside Card for Flow */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-                <Button variant="outline" size="lg" onClick={() => setCurrentQ((c) => c - 1)} disabled={currentQ === 0} className="rounded-xl border-2 px-6 font-bold">
-                  <ChevronLeft className="w-4 h-4 mr-2" /> Previous Question
-                </Button>
-
-                {currentQ === shuffledQuestions.length - 1 ? (
-                  <Button onClick={() => setShowConfirm(true)} size="lg" className="rounded-xl px-8 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20" disabled={isSubmitting}>
-                    {isSubmitting ? "Submitting..." : "Finish Exam"}
-                  </Button>
-                ) : (
-                  <Button onClick={() => setCurrentQ((c) => c + 1)} size="lg" className="rounded-xl px-8 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                    Save & Next <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
-                )}
-              </div>
+              {/* Overlays (Fullscreen, SEB) omitted for brevity in this chunk, they remain in the file */}
             </div>
-          </section>
 
-          {/* Question Palette / Map */}
-          <div className="bg-background rounded-2xl border border-border shadow-sm p-4 overflow-x-auto no-scrollbar">
-            <div className="flex gap-2 min-w-max px-2">
-              {shuffledQuestions.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentQ(i)}
-                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center shrink-0 ${i === currentQ ? "bg-primary text-white scale-110 shadow-md" : answers[shuffledQuestions[i].id] !== undefined ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+            {/* Bottom Actions */}
+            <div className="px-8 py-6 bg-muted/20 border-t border-border flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={markForReviewAndNext}
+                  className={`rounded-xl px-6 font-bold border-2 transition-all ${markedForReview.has(question.id) ? "bg-indigo-500 text-white border-indigo-600 shadow-md" : "hover:border-indigo-400 hover:text-indigo-600"}`}
                 >
-                  {i + 1}
-                </button>
-              ))}
+                  {markedForReview.has(question.id) ? "Unmark Review" : "Mark for Review & Next"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={clearResponse}
+                  className="rounded-xl px-6 font-bold text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Clear Response
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentQ(c => c - 1)}
+                  disabled={currentQ === sectionGroups[activeSection].startIndex}
+                  className="rounded-xl px-6 font-bold border-2"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Previous
+                </Button>
+                <Button
+                  onClick={saveAndNext}
+                  className="rounded-xl px-8 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  {currentQ === shuffledQuestions.length - 1 ? "Save & Finish" : "Save & Next"}
+                  {currentQ < shuffledQuestions.length - 1 && <ChevronRight className="w-4 h-4 ml-2" />}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-4 h-full flex flex-col gap-6">
-          {exam.proctoringEnabled && (
-            <div className="bg-background rounded-3xl border border-border shadow-card overflow-hidden">
-              <AIProctor 
-                onViolation={handleAIViolation} 
-                isFinished={submitted} 
-                existingStream={activeStream} 
+        {/* Sidebar Palette & Proctoring */}
+        <div className="lg:col-span-4 flex flex-col h-full gap-6 overflow-hidden pb-6">
+          {/* Proctoring Feed - Top Fixed */}
+          {!!exam.proctoringEnabled && (
+            <div className="bg-background rounded-3xl border border-border shadow-card overflow-hidden shrink-0">
+              <AIProctor
+                onViolation={handleAIViolation}
+                isFinished={submitted}
+                existingStream={activeStream}
               />
             </div>
           )}
-
+          {/* Status Legend */}
           <div className="bg-background rounded-3xl border border-border shadow-card p-6">
+            <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-primary" /> Evaluation Summary
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Answered", count: Object.keys(answers).length, color: "bg-emerald-500" },
+                { label: "Not Answered", count: Array.from(visited).filter(id => answers[id] === undefined && !markedForReview.has(id)).length, color: "bg-rose-500" },
+                { label: "Not Visited", count: shuffledQuestions.length - visited.size, color: "bg-slate-200 dark:bg-slate-800" },
+                { label: "Marked for Review", count: Array.from(markedForReview).filter(id => answers[id] === undefined).length, color: "bg-indigo-500" },
+                { label: "Ans & Marked", count: Array.from(markedForReview).filter(id => answers[id] !== undefined).length, color: "bg-indigo-500 ring-2 ring-indigo-500 ring-offset-2 ring-offset-emerald-500" }
+              ].map((s, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-muted/30">
+                  <div className={`w-3 h-3 rounded-full ${s.color}`} />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase">{s.label}</span>
+                    <span className="text-sm font-bold leading-none">{s.count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Question Grid - Scrollable */}
+          <div className="bg-background rounded-3xl border border-border shadow-card flex-1 flex flex-col p-6 overflow-y-auto no-scrollbar min-h-0">
+            <div className="flex items-center justify-between mb-6">
+              <h4 className="font-bold text-sm">Question Navigation</h4>
+              <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-1 rounded-lg uppercase tracking-widest">Global Map</span>
+            </div>
+
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+              {shuffledQuestions.map((q, i) => {
+                const isCurrent = i === currentQ;
+                const isAnswered = answers[q.id] !== undefined;
+                const isMarked = markedForReview.has(q.id);
+                const isVis = visited.has(q.id);
+
+                let statusClass = "bg-muted text-muted-foreground border-transparent";
+                if (isMarked) {
+                  statusClass = "bg-indigo-500 text-white border-indigo-600";
+                  if (isAnswered) statusClass += " ring-2 ring-emerald-500 ring-offset-2";
+                } else if (isAnswered) {
+                  statusClass = "bg-emerald-500 text-white border-emerald-600";
+                } else if (isVis) {
+                  statusClass = "bg-rose-500 text-white border-rose-600";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => navigateTo(i)}
+                    className={`aspect-square rounded-xl text-xs font-black transition-all border-2 flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-xl z-10 border-primary ring-2 ring-primary/20" : "hover:scale-105"}`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-background rounded-3xl border border-border shadow-card p-6 shrink-0">
             <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-primary" /> Integrity Guidelines
             </h4>
@@ -603,7 +736,7 @@ export default function LiveExamPage() {
               <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-[11px] text-red-600 font-bold">
                 MANDATORY FULLSCREEN: Any attempt to exit fullscreen or switch tabs will be recorded as a violation.
               </div>
-              {exam.proctoringEnabled && (
+              {!!exam.proctoringEnabled && (
                 <div className="p-3 bg-muted/50 rounded-xl text-[11px] text-muted-foreground">
                   Maintain proper posture. AI monitor will report suspicious movement or noise.
                 </div>

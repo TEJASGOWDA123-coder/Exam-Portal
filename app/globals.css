@@ -63,9 +63,11 @@
    LIGHT MODE (Emerald SaaS)
 ----------------------------------- */
 :root {
-  --radius: 1.25rem; /* 20px */
+  --radius: 1.25rem;
+  /* 20px */
 
-  --background: 210 20% 99%; /* Very subtle grey-white */
+  --background: 210 20% 99%;
+  /* Very subtle grey-white */
   --foreground: 222 47% 11%;
 
   --card: 0 0% 100%;
@@ -74,7 +76,8 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 154 76% 45%; /* More vibrant Emerald from image */
+  --primary: 154 76% 45%;
+  /* More vibrant Emerald from image */
   --primary-foreground: 210 40% 98%;
 
   --secondary: 154 30% 97%;
@@ -102,7 +105,8 @@
    DARK MODE (Emerald SaaS)
 ----------------------------------- */
 .dark {
-  --background: 154 40% 4%; /* Deeper, nearly black-forest */
+  --background: 154 40% 4%;
+  /* Deeper, nearly black-forest */
   --foreground: 210 40% 98%;
 
   --card: 154 40% 7%;
@@ -111,7 +115,8 @@
   --popover: 154 40% 7%;
   --popover-foreground: 210 40% 98%;
 
-  --primary: 154 76% 45%; /* Consistent vibrant emerald */
+  --primary: 154 76% 45%;
+  /* Consistent vibrant emerald */
   --primary-foreground: 154 50% 4%;
 
   --secondary: 154 30% 10%;
@@ -208,10 +213,39 @@
     animation: slideUp 0.4s ease-out;
   }
 
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-800/20 shadow-2xl;
+  }
+
+  .blob {
+    @apply absolute -z-10 rounded-full blur-[120px] opacity-40 animate-pulse;
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+  }
+
+  .animate-float {
+    animation: float 15s infinite ease-in-out;
+  }
+
   @keyframes fadeIn {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -222,10 +256,40 @@
       opacity: 0;
       transform: translateY(12px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  .mirror {
+    transform: scaleX(-1);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40 transition-colors;
   }
 }
 

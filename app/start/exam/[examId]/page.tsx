@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { 
-  ShieldCheck, 
-  Download, 
-  ExternalLink, 
-  Lock, 
+import {
+  ShieldCheck,
+  Download,
+  ExternalLink,
+  Lock,
+  Clock,
   BadgeCheck,
   AlertCircle
 } from "lucide-react";
@@ -58,90 +59,78 @@ export default function PublicStartPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 selection:bg-emerald-500/30">
-      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        
-        {/* Header Section */}
-        <div className="p-10 rounded-[3.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 selection:bg-emerald-500/30 relative overflow-hidden flex items-center justify-center">
+      {/* Animated Background Blobs */}
+      <div className="blob w-[500px] h-[500px] bg-emerald-500/20 -top-20 -left-20 animate-float" />
+      <div className="blob w-[400px] h-[400px] bg-blue-500/20 -bottom-20 -right-20 animate-float [animation-delay:2s]" />
+      <div className="blob w-[300px] h-[300px] bg-purple-500/10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float [animation-delay:5s]" />
+
+      <div className="max-w-2xl w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
+
+        {/* Header Section - Glassmorphic */}
+        <div className="p-8 rounded-3xl glass relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
             <ShieldCheck className="h-48 w-48 text-emerald-500 rotate-12" />
           </div>
-          
+
           <div className="relative z-10 space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Secure Protocol v2.0</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">Secure Access</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Node
               </div>
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-[0.9]">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
                 {exam.title}
               </h1>
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs opacity-60">
-                Matrix Authorization Interface
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                Standard Evaluation Interface v2.4
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pb-2">
-              <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Duration</span>
-                <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.duration} Minutes</span>
-              </div>
-              <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Total Marks</span>
-                <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.totalMarks} Points</span>
+            <div className="pt-4">
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center transition-colors hover:border-emerald-500/30">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Duration</span>
+                <span className="text-2xl font-bold text-slate-900 dark:text-white">{exam.duration} Minutes</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Instructions Card */}
-        <div className="p-10 rounded-[3.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
-           <div className="flex items-center gap-4 mb-8">
-              <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                 <BadgeCheck className="h-6 w-6 text-emerald-500" />
-              </div>
-              <h2 className="text-2xl font-black tracking-tighter">Candidate Instructions</h2>
-           </div>
-
-           <div className="space-y-6">
-              <div className="prose prose-slate dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                 <ul className="space-y-4 list-none p-0">
-                    <li className="flex gap-4">
-                       <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">01</span>
-                       <span>Ensure a stable high-speed network connection before initiation.</span>
-                    </li>
-                    <li className="flex gap-4">
-                       <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">02</span>
-                       <span>AI Integrity Guard will monitor gaze, audio, and peripheral activity.</span>
-                    </li>
-                     <li className="flex gap-4">
-                        <span className="flex-none w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">03</span>
-                        <span>Exiting the secure evaluation environment will trigger a compliance review.</span>
-                     </li>
-                 </ul>
-              </div>
-
-              <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-                  <Button 
-                    asChild
-                    className="h-20 rounded-[2rem] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-lg shadow-[0_20px_40px_rgba(34,197,94,0.3)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98]"
-                  >
-                    <a href={`/exam/${examId}/live`}>
-                      Initiate Assessment Session
-                    </a>
-                  </Button>
-              </div>
-           </div>
+        {/* Action Section */}
+        <div className="p-2 rounded-[2rem] glass relative group/btn overflow-hidden transition-all duration-300">
+          <div className="flex flex-col gap-4 relative z-10">
+            <Button
+              asChild
+              className="h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg shadow-lg transition-all active:scale-[0.98] flex items-center justify-center"
+            >
+              <a href={`/exam/${examId}/live`} className="w-full h-full flex items-center justify-center gap-4">
+                Initiate Assessment Session
+                <Lock className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
         </div>
 
-        {/* Footer Support */}
-        <div className="flex justify-end items-center px-6 pb-20">
-           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+        {/* Enhanced Footer */}
+        <div className="flex flex-col items-center gap-4 pt-4">
+          <div className="flex items-center gap-8 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="flex items-center gap-1.5">
               <ShieldCheck className="h-3 w-3" />
-              End-to-End Encrypted Session
-           </div>
+              Encrypted
+            </div>
+            <div className="flex items-center gap-1.5">
+              <BadgeCheck className="h-3 w-3" />
+              Verified
+            </div>
+          </div>
         </div>
       </div>
     </div>

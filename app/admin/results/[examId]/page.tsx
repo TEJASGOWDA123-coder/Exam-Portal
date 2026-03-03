@@ -43,6 +43,7 @@ export default function ViewResults() {
    const router = useRouter();
    const [search, setSearch] = useState("");
    const [fClass, setFClass] = useState("all");
+   const [fYear, setFYear] = useState("all");
    const [fSection, setFSection] = useState("all");
    const [isRefreshing, setIsRefreshing] = useState(false);
    const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
@@ -80,7 +81,7 @@ export default function ViewResults() {
 
    const handleRescheduleAll = async () => {
       const confirmation = prompt(`Type "RESCHEDULE" to confirm resetting ALL results for "${currentExam?.title}". This will allow all students to re-take the exam. This action is IRREVERSIBLE.`);
-      
+
       if (confirmation !== "RESCHEDULE") {
          if (confirmation !== null) toast.error("Incorrect confirmation text");
          return;
@@ -102,6 +103,7 @@ export default function ViewResults() {
    const filtered = results.filter((r) => {
       if (examId && r.examId !== examId) return false;
       if (fClass !== "all" && r.class !== fClass) return false;
+      if (fYear !== "all" && r.year !== fYear) return false;
       if (fSection !== "all" && r.section !== fSection) return false;
 
       const name = (r.studentName || "").toLowerCase();
@@ -111,6 +113,7 @@ export default function ViewResults() {
    });
 
    const classes = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.class)));
+   const years = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.year)));
    const studentSections = Array.from(new Set(results.filter(r => r.examId === examId).map(r => r.section)));
 
    const submissionSections = Array.from(new Set(
@@ -137,7 +140,8 @@ export default function ViewResults() {
             "Student Name": r.studentName,
             "USN": r.usn,
             "Email": r.email,
-            "Class": r.class,
+            "Department": r.class,
+            "Year": r.year,
             "Section": r.section,
             "Total Score": r.score,
             "Max Marks": currentExam?.totalMarks || 0,
@@ -192,7 +196,7 @@ export default function ViewResults() {
                      Back to Dashboard
                   </Link>
                </Button>
-                <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="font-bold">
+               <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="font-bold">
                   <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   Sync
                </Button>
@@ -246,15 +250,23 @@ export default function ViewResults() {
                      onChange={(e) => setFClass(e.target.value)}
                      className="h-11 px-4 rounded-md bg-card border border-input text-sm font-medium focus:ring-1 focus:ring-ring"
                   >
-                     <option value="all">Class: All</option>
+                     <option value="all">Dept: All</option>
                      {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select
+                     value={fYear}
+                     onChange={(e) => setFYear(e.target.value)}
+                     className="h-11 px-4 rounded-md bg-card border border-input text-sm font-medium focus:ring-1 focus:ring-ring"
+                  >
+                     <option value="all">Year: All</option>
+                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                   <select
                      value={fSection}
                      onChange={(e) => setFSection(e.target.value)}
                      className="h-11 px-4 rounded-md bg-card border border-input text-sm font-medium focus:ring-1 focus:ring-ring"
                   >
-                     <option value="all">Section: All</option>
+                     <option value="all">Sec: All</option>
                      {studentSections.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                </div>
@@ -296,9 +308,15 @@ export default function ViewResults() {
                                     </div>
                                  </td>
                                  <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                        <span className="px-2 py-1 rounded bg-muted text-xs font-medium text-foreground border border-border">
-                                          {r.class} - {r.section}
+                                          {r.class}
+                                       </span>
+                                       <span className="px-2 py-1 rounded bg-muted text-xs font-medium text-foreground border border-border">
+                                          Year: {r.year}
+                                       </span>
+                                       <span className="px-2 py-1 rounded bg-muted text-xs font-medium text-foreground border border-border">
+                                          Sec: {r.section}
                                        </span>
                                     </div>
                                  </td>
@@ -344,7 +362,7 @@ export default function ViewResults() {
             </div>
          </div>
 
-          {/* Details Modal */}
+         {/* Details Modal */}
          <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-0 border-border shadow-2xl bg-card">
                <DialogHeader className="sr-only">

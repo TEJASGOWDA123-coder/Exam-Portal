@@ -5,9 +5,9 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { name, email, usn, class: className, section, examId } = body;
+        const { name, email, usn, class: className, year, section, examId } = body;
 
-        if (!name || !email || !usn || !className || !section || !examId) {
+        if (!name || !email || !usn || !className || !year || !section || !examId) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
@@ -18,6 +18,7 @@ export async function POST(req: Request) {
             email: email.trim(),
             usn: usn.trim().toUpperCase(),
             class: className.trim(),
+            year: year.trim(),
             section: section.trim(),
         };
 
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
                 name: studentData.name,
                 email: studentData.email,
                 class: studentData.class,
+                year: studentData.year,
                 section: studentData.section
             }
         });

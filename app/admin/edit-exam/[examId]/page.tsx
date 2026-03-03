@@ -39,9 +39,11 @@ export default function EditExam() {
     const [proctoringEnabled, setProctoringEnabled] = useState(false);
     const [showResults, setShowResults] = useState(true);
     const [sebConfigId, setSebConfigId] = useState<string | null>(null);
+    const [positiveMarks, setPositiveMarks] = useState("1");
+    const [negativeMarks, setNegativeMarks] = useState("0");
     const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
     const [uploadingSeb, setUploadingSeb] = useState(false);
-    const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
+    const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
     const [loading, setLoading] = useState(true);
 
     const exam = exams.find((e) => e.id === examId);
@@ -56,7 +58,13 @@ export default function EditExam() {
             setProctoringEnabled(!!exam.proctoringEnabled);
             setShowResults(exam.showResults !== undefined ? !!exam.showResults : true);
             setSebConfigId(exam.sebConfigId || null);
-            setSectionsConfig(exam.sectionsConfig || []);
+            setPositiveMarks(exam.positiveMarks?.toString() || "1");
+            setNegativeMarks(exam.negativeMarks || "0");
+            const mappedSections = (exam.sectionsConfig || []).map(s => ({
+                ...s,
+                duration: s.duration || Math.floor(exam.duration / (exam.sectionsConfig?.length || 1)) || 5
+            }));
+            setSectionsConfig(mappedSections);
             setLoading(false);
         } else {
             const fetchExam = async () => {
@@ -72,7 +80,13 @@ export default function EditExam() {
                         setProctoringEnabled(!!data.proctoringEnabled);
                         setShowResults(data.showResults !== undefined ? !!data.showResults : true);
                         setSebConfigId(data.sebConfigId || null);
-                        setSectionsConfig(data.sectionsConfig || []);
+                        setPositiveMarks(data.positiveMarks?.toString() || "1");
+                        setNegativeMarks(data.negativeMarks || "0");
+                        const mappedSections = (data.sectionsConfig || []).map((s: any) => ({
+                            ...s,
+                            duration: s.duration || Math.floor(data.duration / (data.sectionsConfig?.length || 1)) || 5
+                        }));
+                        setSectionsConfig(mappedSections);
                         setLoading(false);
                     } else {
                         toast.error("Exam not found");
@@ -179,6 +193,8 @@ export default function EditExam() {
             proctoringEnabled,
             showResults,
             sebConfigId,
+            positiveMarks: parseInt(positiveMarks) || 1,
+            negativeMarks: negativeMarks || "0",
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
             status: exam?.status || "upcoming",
             questions: exam?.questions || [],
@@ -300,6 +316,35 @@ export default function EditExam() {
                                             />
                                         </div>
                                     </div>
+
+                                    <div className="grid grid-cols-2 gap-6 p-4 rounded-xl border border-primary/10 bg-primary/5 mt-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="pos-marks" className="text-emerald-600 font-bold">Positive Marking (per question)</Label>
+                                            <Input
+                                                id="pos-marks"
+                                                type="number"
+                                                value={positiveMarks}
+                                                onChange={(e) => setPositiveMarks(e.target.value)}
+                                                placeholder="1"
+                                                className="h-11 border-emerald-200 focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="neg-marks" className="text-destructive font-bold">Negative Marking (e.g. 0.25)</Label>
+                                            <Input
+                                                id="neg-marks"
+                                                type="number"
+                                                step="0.01"
+                                                value={negativeMarks}
+                                                onChange={(e) => setNegativeMarks(e.target.value)}
+                                                placeholder="0"
+                                                className="h-11 border-destructive/20 focus:border-destructive"
+                                            />
+                                        </div>
+                                        <p className="col-span-2 text-[10px] text-muted-foreground italic">
+                                            * Negative marks should be entered as a positive number (e.g., 0.25 will deduct 0.25 points for wrong answers).
+                                        </p>
+                                    </div>
                                 </TabsContent>
 
                                 <TabsContent value="sections" className="space-y-6">
@@ -341,6 +386,19 @@ export default function EditExam() {
                                                         className="h-9 bg-background text-center"
                                                     />
                                                 </div>
+                                                <div className="w-24 space-y-2">
+                                                    <Label className="text-xs">Time (Min)</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={sec.duration}
+                                                        onChange={(e) => {
+                                                            const next = [...sectionsConfig];
+                                                            next[idx].duration = parseInt(e.target.value) || 0;
+                                                            setSectionsConfig(next);
+                                                        }}
+                                                        className="h-9 bg-background text-center"
+                                                    />
+                                                </div>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -356,12 +414,13 @@ export default function EditExam() {
                                             type="button"
                                             variant="outline"
                                             className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-primary hover:border-primary/50"
-                                            onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10 }])}
+                                            onClick={() => setSectionsConfig([...sectionsConfig, { name: "", pickCount: 10, duration: 5 }])}
                                         >
                                             <Plus className="w-4 h-4 mr-2" />
                                             Add Section Configuration
                                         </Button>
                                     </div>
+                                    <p className="text-[10px] text-muted-foreground mt-2 italic">* Sectional durations enforce strict time limits per section. Total exam time should consider these individual limits.</p>
                                 </TabsContent>
 
                                 <TabsContent value="settings" className="space-y-6">
@@ -393,8 +452,8 @@ export default function EditExam() {
                                             <Label className="text-base font-bold">Safe Exam Browser (SEB)</Label>
                                         </div>
                                         <div className="flex gap-2">
-                                            <select 
-                                                value={sebConfigId || ""} 
+                                            <select
+                                                value={sebConfigId || ""}
                                                 onChange={(e) => setSebConfigId(e.target.value || null)}
                                                 className="flex-1 h-11 px-4 rounded-xl bg-muted border border-border text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all cursor-pointer"
                                             >
@@ -404,18 +463,18 @@ export default function EditExam() {
                                                 ))}
                                             </select>
                                             <div className="relative">
-                                                <input 
-                                                    type="file" 
-                                                    accept=".seb" 
-                                                    id="quick-seb-upload" 
-                                                    className="hidden" 
+                                                <input
+                                                    type="file"
+                                                    accept=".seb"
+                                                    id="quick-seb-upload"
+                                                    className="hidden"
                                                     onChange={handleSebUpload}
                                                     disabled={uploadingSeb}
                                                 />
-                                                <Button 
-                                                    asChild 
-                                                    variant="outline" 
-                                                    size="icon" 
+                                                <Button
+                                                    asChild
+                                                    variant="outline"
+                                                    size="icon"
                                                     className="h-11 w-11 rounded-xl border-dashed"
                                                     disabled={uploadingSeb}
                                                 >

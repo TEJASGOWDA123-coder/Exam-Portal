@@ -64,16 +64,16 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
 
     const initialize = async () => {
       // Use existing stream if available, otherwise request new one
-      const streamPromise = existingStream 
+      const streamPromise = existingStream
         ? Promise.resolve(existingStream)
         : navigator.mediaDevices.getUserMedia({
-            video: {
-              width: 640,
-              height: 480,
-              frameRate: { ideal: 15, max: 20 },
-            },
-            audio: true,
-          });
+          video: {
+            width: 640,
+            height: 480,
+            frameRate: { ideal: 15, max: 20 },
+          },
+          audio: true,
+        });
 
       const scriptPromise = loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
@@ -86,7 +86,10 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          // Handle play() promise to catch AbortError if interrupted
+          videoRef.current.play().catch(e => {
+            if (e.name !== "AbortError") console.error("Video play failed:", e);
+          });
         }
 
         // Initialize FaceMesh after script is loaded
@@ -306,7 +309,7 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
       audioContext?.close();
       faceMesh?.close?.();
     };
-  }, []);
+  }, [existingStream]);
 
   return (
     <div className="flex flex-col gap-4 items-center p-4 bg-card border border-border rounded-xl shadow-sm">

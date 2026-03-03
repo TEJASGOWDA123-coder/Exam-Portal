@@ -34,7 +34,9 @@ export interface Exam {
   proctoringEnabled?: boolean | number;
   showResults?: boolean | number;
   sebConfigId?: string | null;
-  sectionsConfig?: { name: string; pickCount: number }[];
+  positiveMarks?: number;
+  negativeMarks?: string;
+  sectionsConfig?: { name: string; pickCount: number; duration: number }[];
   questions: Question[];
 }
 
@@ -45,6 +47,7 @@ export interface Student {
   email: string;
   usn: string;
   class: string;
+  year: string;
   section: string;
 }
 
@@ -55,10 +58,12 @@ export interface Submission {
   usn: string;
   email: string;
   class: string;
+  year: string;
   section: string;
   score: number;
   violations: number;
   sectionScores?: Record<string, number>;
+  answers?: Record<string, any>;
   justifications?: Record<string, string>;
   submittedAt: string | Date;
 }
@@ -223,7 +228,7 @@ export function ExamProvider({ children }: { children: ReactNode }) {
         const text = await resp.text();
         return { error: text || "Unknown API error" };
       });
-      
+
       console.error("Failed to add result:", errData);
       const errorMsg = errData.error || "Submission Failed";
       toast.error(errorMsg);

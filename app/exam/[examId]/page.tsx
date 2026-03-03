@@ -22,6 +22,7 @@ export default function ExamEntry() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [className, setClassName] = useState("");
+  const [year, setYear] = useState("");
   const [section, setSection] = useState("");
   const [isInSeb, setIsInSeb] = useState(true);
 
@@ -42,7 +43,7 @@ export default function ExamEntry() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usn.trim() || !name.trim() || !email.trim() || !className.trim() || !section.trim()) {
+    if (!usn.trim() || !name.trim() || !email.trim() || !className.trim() || !year.trim() || !section.trim()) {
       toast.error("Please fill all fields");
       return;
     }
@@ -70,6 +71,7 @@ export default function ExamEntry() {
         email: email.trim(),
         usn: usn.trim(),
         class: className.trim(),
+        year: year.trim(),
         section: section.trim(),
       });
 
@@ -153,12 +155,23 @@ export default function ExamEntry() {
                 />
               </div>
               <div>
-                <Label htmlFor="class">Class</Label>
+                <Label htmlFor="class">Department</Label>
                 <Input
                   id="class"
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
-                  placeholder="e.g. 6th"
+                  placeholder="e.g. CSE"
+                  className="mt-1.5"
+                  disabled={!!isEntryDisabled}
+                />
+              </div>
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  placeholder="e.g. 3rd"
                   className="mt-1.5"
                   disabled={!!isEntryDisabled}
                 />
@@ -194,7 +207,7 @@ export default function ExamEntry() {
                 This exam is restricted to the <span className="text-white font-bold">Safe Exam Browser</span>. You cannot enter the exam using a standard browser.
               </p>
               <div className="grid grid-cols-1 gap-3">
-                <Button 
+                <Button
                   className="bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-600/20"
                   onClick={() => {
                     const host = window.location.host;
@@ -206,23 +219,23 @@ export default function ExamEntry() {
                   Launch in SEB
                 </Button>
                 <div className="flex items-center justify-between gap-3 mt-2">
-                   <a 
-                    href={`/api/seb/config/${examId}`} 
+                  <a
+                    href={`/api/seb/config/${examId}`}
                     download
                     className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
-                   >
-                     <Download className="w-3 h-3" />
-                     Download Config
-                   </a>
-                   <a 
-                    href="https://safeexambrowser.org/download_en.html" 
-                    target="_blank" 
+                  >
+                    <Download className="w-3 h-3" />
+                    Download Config
+                  </a>
+                  <a
+                    href="https://safeexambrowser.org/download_en.html"
+                    target="_blank"
                     rel="noreferrer"
                     className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
-                   >
-                     <ExternalLink className="w-3 h-3" />
-                     Install SEB
-                   </a>
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Install SEB
+                  </a>
                 </div>
               </div>
             </div>

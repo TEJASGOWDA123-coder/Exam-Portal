@@ -24,7 +24,7 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const data = await req.json();
-        const { examId, studentName, usn, email, class: studentClass, section, score, violations, sectionScores, justifications } = data;
+        const { examId, studentName, usn, email, class: studentClass, year, section, score, violations, sectionScores, answers, justifications } = data;
 
         if (!examId || !usn || !studentName) {
             return NextResponse.json({ error: "Missing critical fields" }, { status: 400 });
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         if (exam?.sebConfigId) {
             const ua = req.headers.get("user-agent") || "";
             if (!ua.includes("SEB")) {
-                return NextResponse.json({ 
+                return NextResponse.json({
                     error: "Security violation: This exam must be submitted using the Safe Exam Browser.",
                 }, { status: 403 });
             }
@@ -54,21 +54,23 @@ export async function POST(req: Request) {
                 usn,
                 email,
                 class: studentClass,
+                year: year,
                 section,
                 score,
                 violations: violations || 0,
                 sectionScores: sectionScores ? JSON.stringify(sectionScores) : null,
+                answers: answers ? JSON.stringify(answers) : null,
                 justifications: justifications ? JSON.stringify(justifications) : null,
                 submittedAt: new Date()
             });
         } catch (dbError: any) {
             console.error("Database error during insert:", dbError);
             if (dbError.message?.includes("UNIQUE constraint failed")) {
-                return NextResponse.json({ 
+                return NextResponse.json({
                     error: "You have already submitted this exam.",
                 }, { status: 409 });
             }
-            return NextResponse.json({ 
+            return NextResponse.json({
                 error: `Database error: ${dbError.message}`,
             }, { status: 500 });
         }
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error("Top-level submission error:", error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             error: error.message || "Internal Server Error",
         }, { status: 500 });
     }
