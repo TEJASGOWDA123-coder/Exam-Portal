@@ -396,16 +396,97 @@ export default function ViewResults() {
                      const feedback = aiFeedbacks[`${selectedSubmission?.id}-${q.id}`];
                      const isValidating = validatingJustification[q.id];
 
+                     const answers = typeof selectedSubmission?.answers === 'string' ? JSON.parse(selectedSubmission.answers) : selectedSubmission?.answers || {};
+                     const studentAnswer = answers[q.id];
+
+                     let parsedOptions: any[] = [];
+                     try {
+                        parsedOptions = typeof q.options === 'string' ? JSON.parse(q.options) : q.options || [];
+                     } catch(e) {}
+
+                     const renderAnswer = (ans: any) => {
+                        if (ans === undefined || ans === null || ans === "") return <span className="text-muted-foreground italic">Not answered</span>;
+                        
+                        if (q.type !== 'mcq' && q.type !== 'msq') {
+                           return <span className="text-foreground">{String(ans)}</span>;
+                        }
+
+                        if (q.type === 'mcq') {
+                           const idx = parseInt(ans);
+                           if (isNaN(idx)) return String(ans);
+                           return <span className="text-foreground">{parsedOptions[idx]?.text || `Option ${idx + 1}`}</span>;
+                        }
+                        
+                        if (q.type === 'msq') {
+                           let arr = ans;
+                           if (typeof ans === 'string') {
+                              try { arr = JSON.parse(ans); } catch(e) { arr = []; }
+                           }
+                           if (Array.isArray(arr)) {
+                              return (
+                                 <ul className="list-disc list-inside text-foreground space-y-1">
+                                    {arr.map(i => <li key={i}>{parsedOptions[parseInt(i)]?.text || `Option ${parseInt(i) + 1}`}</li>)}
+                                 </ul>
+                              );
+                           }
+                           return String(ans);
+                        }
+                        return String(ans);
+                     };
+
+                     const checkCorrectness = () => {
+                        if (studentAnswer === undefined || studentAnswer === null || studentAnswer === "") return false;
+                        if (q.type === 'mcq') return parseInt(studentAnswer) === parseInt(q.correctAnswer);
+                        if (q.type === 'msq') {
+                           let sArr = Array.isArray(studentAnswer) ? studentAnswer.map(Number) : [];
+                           let cArr: number[] = [];
+                           try { cArr = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer).map(Number) : []; } catch(e) {}
+                           return sArr.length === cArr.length && [...sArr].sort().join(',') === [...cArr].sort().join(',');
+                        }
+                        return String(studentAnswer).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase();
+                     };
+
+                     const isCorrect = checkCorrectness();
+
                      return (
                         <div key={q.id} className="group pb-8 border-b border-border last:border-0 last:pb-0">
                            <div className="flex items-start gap-4">
                               <span className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground mt-0.5">{idx + 1}</span>
                               <div className="flex-1 space-y-4">
                                  <div>
-                                    <h4 className="font-bold text-foreground mb-1">{q.question}</h4>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
-                                       {q.section}
-                                    </span>
+                                    <h4 className="font-bold text-foreground mb-1 whitespace-pre-wrap">{q.question}</h4>
+                                    <div className="flex gap-2">
+                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                                          {q.section}
+                                       </span>
+                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border uppercase tracking-widest">
+                                          {q.type}
+                                       </span>
+                                    </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-muted/30 rounded-xl border border-border p-4 flex flex-col">
+                                       <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                                          Student Selection
+                                          {studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== "" && (
+                                             isCorrect ? 
+                                             <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-500/20 font-black">CORRECT</span> :
+                                             <span className="text-[9px] bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded border border-red-500/20 font-black">INCORRECT</span>
+                                          )}
+                                       </div>
+                                       <div className="text-sm flex-1">
+                                          {renderAnswer(studentAnswer)}
+                                       </div>
+                                    </div>
+                                    <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 flex flex-col">
+                                       <div className="text-[10px] font-bold text-primary mb-2 flex items-center gap-2 uppercase tracking-wider">
+                                          Correct Answer(s)
+                                       </div>
+                                       <div className="text-sm flex-1">
+                                          {renderAnswer(q.correctAnswer)}
+                                       </div>
+                                    </div>
                                  </div>
 
                                  {q.requiresJustification ? (
@@ -442,7 +523,7 @@ export default function ViewResults() {
                                        )}
                                     </div>
                                  ) : (
-                                    <p className="text-xs text-muted-foreground italic pl-1">No justification required.</p>
+                                    <p className="text-[10px] text-muted-foreground italic font-medium opacity-60">No justification required for this question.</p>
                                  )}
                               </div>
                            </div>

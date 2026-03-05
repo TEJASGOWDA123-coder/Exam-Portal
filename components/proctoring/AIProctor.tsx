@@ -7,9 +7,11 @@ interface AIProctorProps {
   onViolation: (reason: string, points: number) => void;
   isFinished?: boolean;
   existingStream?: MediaStream | null;
+  proctoringAudioEnabled?: boolean;
+  proctoringVideoEnabled?: boolean;
 }
 
-function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) {
+function AIProctor({ onViolation, isFinished, existingStream, proctoringAudioEnabled = true, proctoringVideoEnabled = true }: AIProctorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeViolations, setActiveViolations] = useState<string[]>([]);
@@ -67,17 +69,17 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
       const streamPromise = existingStream
         ? Promise.resolve(existingStream)
         : navigator.mediaDevices.getUserMedia({
-          video: {
+          video: proctoringVideoEnabled ? {
             width: 640,
             height: 480,
             frameRate: { ideal: 15, max: 20 },
-          },
-          audio: true,
+          } : false,
+          audio: proctoringAudioEnabled,
         });
 
-      const scriptPromise = loadScript(
+      const scriptPromise = proctoringVideoEnabled ? loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
-      );
+      ) : Promise.resolve();
 
       try {
         // Wait for both to be ready
@@ -94,7 +96,7 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
 
         // Initialize FaceMesh after script is loaded
         // @ts-ignore
-        if (window.FaceMesh) {
+        if (proctoringVideoEnabled && window.FaceMesh) {
           // @ts-ignore
           faceMesh = new window.FaceMesh({
             locateFile: (file: string) =>
@@ -126,15 +128,17 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
         }
 
         // Setup Audio analysis
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
+        if (proctoringAudioEnabled) {
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
 
-        const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
+          const bufferLength = analyser.frequencyBinCount;
+          dataArray = new Uint8Array(bufferLength);
 
-        source.connect(analyser);
+          source.connect(analyser);
+        }
 
         detectLoop();
       } catch (err) {
@@ -146,6 +150,7 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
       if (isClosed) return;
 
       if (
+        proctoringVideoEnabled &&
         videoRef.current &&
         videoRef.current.readyState >= 2 &&
         isInitialized &&
@@ -158,12 +163,11 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
         }
       }
 
-      if (analyser) {
+      if (proctoringAudioEnabled && analyser) {
         monitorAudio();
-      }
-
-      if (canvasRef.current && analyser) {
-        drawAudioGraph(analyser, dataArray);
+        if (canvasRef.current) {
+          drawAudioGraph(analyser, dataArray);
+        }
       }
 
       animationFrameId = requestAnimationFrame(detectLoop);
@@ -313,42 +317,52 @@ function AIProctor({ onViolation, isFinished, existingStream }: AIProctorProps) 
 
   return (
     <div className="flex flex-col gap-4 items-center p-4 bg-card border border-border rounded-xl shadow-sm">
-      <div className="relative group">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-full max-w-[320px] rounded-lg border-2 border-primary/20 aspect-video object-cover"
-        />
+      {proctoringVideoEnabled && (
+        <div className="relative group w-full max-w-[320px]">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full rounded-lg border-2 border-primary/20 aspect-video object-cover"
+          />
 
-        {activeViolations.length > 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 backdrop-blur-[2px] rounded-lg">
-            {activeViolations.map((reason, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 bg-destructive text-white px-3 py-1 rounded-md text-xs font-bold animate-bounce mb-2 shadow-lg"
-              >
-                <AlertTriangle className="w-3 h-3" />
-                {reason}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="w-full max-w-[320px] space-y-2">
-        <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          <span>Audio Spectrum</span>
-          <span className="text-primary animate-pulse">Monitoring</span>
+          {activeViolations.length > 0 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 backdrop-blur-[2px] rounded-lg">
+              {activeViolations.map((reason, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 bg-destructive text-white px-3 py-1 rounded-md text-xs font-bold animate-bounce mb-2 shadow-lg"
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  {reason}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <canvas
-          ref={canvasRef}
-          width={320}
-          height={60}
-          className="w-full bg-muted/30 rounded-lg border border-border overflow-hidden"
-        />
-      </div>
+      )}
+
+      {proctoringAudioEnabled && (
+        <div className="w-full max-w-[320px] space-y-2">
+          <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            <span>Audio Spectrum</span>
+            <span className="text-primary animate-pulse">Monitoring</span>
+          </div>
+          <canvas
+            ref={canvasRef}
+            width={320}
+            height={60}
+            className="w-full bg-muted/30 rounded-lg border border-border overflow-hidden"
+          />
+        </div>
+      )}
+      
+      {!proctoringVideoEnabled && !proctoringAudioEnabled && (
+        <div className="text-xs text-muted-foreground italic text-center p-4">
+          Local device AI proctoring is minimal for this exam.
+        </div>
+      )}
     </div>
   );
 }

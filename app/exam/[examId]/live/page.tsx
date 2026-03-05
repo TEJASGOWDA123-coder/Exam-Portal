@@ -486,6 +486,8 @@ export default function LiveExamPage() {
       <PreExamCheck
         examTitle={exam.title}
         proctoringEnabled={!!exam.proctoringEnabled}
+        proctoringAudioEnabled={!!exam.proctoringAudioEnabled}
+        proctoringVideoEnabled={!!exam.proctoringVideoEnabled}
         onProceed={(stream: MediaStream | null) => {
           if (stream) setActiveStream(stream);
           enterFullscreen();
@@ -664,6 +666,8 @@ export default function LiveExamPage() {
                 onViolation={handleAIViolation}
                 isFinished={submitted}
                 existingStream={activeStream}
+                proctoringAudioEnabled={!!exam.proctoringAudioEnabled}
+                proctoringVideoEnabled={!!exam.proctoringVideoEnabled}
               />
             </div>
           )}

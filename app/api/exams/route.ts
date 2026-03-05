@@ -39,6 +39,8 @@ export async function GET() {
                 return {
                     ...exam,
                     status,
+                    proctoringAudioEnabled: exam.proctoringAudioEnabled,
+                    proctoringVideoEnabled: exam.proctoringVideoEnabled,
                     sectionsConfig: parseJson(exam.sectionsConfig),
                     blueprint: parseJson(exam.blueprint),
                     questions: examQuestions.map(q => ({
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, showResults, sebConfigId, questions: examQuestions, blueprint } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, sebConfigId, questions: examQuestions, blueprint } = data;
 
 
 
@@ -91,6 +93,8 @@ export async function POST(req: Request) {
                 endTime,
                 status,
                 proctoringEnabled: proctoringEnabled ? 1 : 0,
+                proctoringAudioEnabled: proctoringAudioEnabled !== undefined ? (proctoringAudioEnabled ? 1 : 0) : 1,
+                proctoringVideoEnabled: proctoringVideoEnabled !== undefined ? (proctoringVideoEnabled ? 1 : 0) : 1,
                 showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
                 sebConfigId: sebConfigId || null,
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
@@ -128,9 +132,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, id });
     } catch (error: any) {
         console.error("Failed to save exam:", error);
-        
-
-        
         return NextResponse.json({ 
             error: error?.message || "Internal Server Error",
             details: error?.message || "Failed to save exam. Please check the console for details."

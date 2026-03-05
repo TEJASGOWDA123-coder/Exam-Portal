@@ -32,6 +32,8 @@ export interface Exam {
   endTime: string;
   status: "active" | "upcoming" | "completed";
   proctoringEnabled?: boolean | number;
+  proctoringAudioEnabled?: boolean | number;
+  proctoringVideoEnabled?: boolean | number;
   showResults?: boolean | number;
   sebConfigId?: string | null;
   positiveMarks?: number;

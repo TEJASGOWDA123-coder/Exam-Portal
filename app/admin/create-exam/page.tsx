@@ -10,6 +10,13 @@ import { Exam, useExam } from "@/hooks/contexts/ExamContext";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
+import {
    Plus,
    Upload,
    Trash2,
@@ -38,11 +45,14 @@ export default function CreateExam() {
    const [startTime, setStartTime] = useState("");
    const [endTime, setEndTime] = useState("");
    const [proctoringEnabled, setProctoringEnabled] = useState(false);
+   const [proctoringAudio, setProctoringAudio] = useState(true);
+   const [proctoringVideo, setProctoringVideo] = useState(true);
    const [showResults, setShowResults] = useState(true);
    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
    const [positiveMarks, setPositiveMarks] = useState("1");
    const [negativeMarks, setNegativeMarks] = useState("0");
    const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
+   const [availableSections, setAvailableSections] = useState<{ id: string, name: string }[]>([]);
    const [uploadingSeb, setUploadingSeb] = useState(false);
    const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
    const { addExam } = useExam();
@@ -72,8 +82,11 @@ export default function CreateExam() {
          try {
             const resp = await fetch("/api/admin/seb");
             if (resp.ok) setConfigs(await resp.json());
+            
+            const secResp = await fetch("/api/sections");
+            if (secResp.ok) setAvailableSections(await secResp.json());
          } catch (err) {
-            console.error("Failed to fetch SEB configs", err);
+            console.error("Failed to fetch initial data", err);
          }
       };
       fetchConfigs();
@@ -137,6 +150,8 @@ export default function CreateExam() {
          endTime,
          status: "upcoming",
          proctoringEnabled,
+         proctoringAudioEnabled: proctoringAudio,
+         proctoringVideoEnabled: proctoringVideo,
          showResults,
          sebConfigId,
          positiveMarks: parseInt(positiveMarks) || 1,
@@ -297,18 +312,26 @@ export default function CreateExam() {
                            <div className="space-y-3">
                               {sectionsConfig.map((sec, idx) => (
                                  <div key={idx} className="flex items-end gap-3 p-4 bg-muted/20 rounded-xl border border-border animate-in fade-in slide-in-from-top-2">
-                                    <div className="flex-1 space-y-2">
-                                       <Label className="text-xs">Section Name</Label>
-                                       <Input
-                                          value={sec.name}
-                                          onChange={(e) => {
-                                             const next = [...sectionsConfig];
-                                             next[idx].name = e.target.value;
-                                             setSectionsConfig(next);
-                                          }}
-                                          className="h-9 bg-background"
-                                       />
-                                    </div>
+                                     <div className="flex-1 space-y-2">
+                                        <Label className="text-xs">Section Name</Label>
+                                        <Select
+                                           value={sec.name}
+                                           onValueChange={(val) => {
+                                              const next = [...sectionsConfig];
+                                              next[idx].name = val;
+                                              setSectionsConfig(next);
+                                           }}
+                                        >
+                                           <SelectTrigger className="h-9 bg-background">
+                                              <SelectValue placeholder="Select Template" />
+                                           </SelectTrigger>
+                                           <SelectContent>
+                                              {availableSections.map(s => (
+                                                 <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                              ))}
+                                           </SelectContent>
+                                        </Select>
+                                     </div>
                                     <div className="w-24 space-y-2">
                                        <Label className="text-xs">Pick Count</Label>
                                        <Input
@@ -371,6 +394,19 @@ export default function CreateExam() {
                               </div>
                               <Switch checked={proctoringEnabled} onCheckedChange={setProctoringEnabled} />
                            </div>
+
+                           {proctoringEnabled && (
+                              <div className="grid grid-cols-2 gap-4 ml-6 pl-4 border-l-2 border-primary/20 animate-in slide-in-from-top-2">
+                                 <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/10">
+                                    <Label className="text-sm font-bold text-muted-foreground mr-4">Require Camera</Label>
+                                    <Switch checked={proctoringVideo} onCheckedChange={setProctoringVideo} />
+                                 </div>
+                                 <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/10">
+                                    <Label className="text-sm font-bold text-muted-foreground mr-4">Require Microphone</Label>
+                                    <Switch checked={proctoringAudio} onCheckedChange={setProctoringAudio} />
+                                 </div>
+                              </div>
+                           )}
 
                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
                               <div className="space-y-0.5">

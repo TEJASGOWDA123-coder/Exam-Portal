@@ -43,7 +43,6 @@ export const sections = sqliteTable("sections", {
 export type Section = typeof sections.$inferSelect;
 export type NewSection = typeof sections.$inferInsert;
 
-// Exams table
 export const exams = sqliteTable("exams", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
@@ -53,6 +52,8 @@ export const exams = sqliteTable("exams", {
   endTime: text("end_time").notNull(),
   status: text("status", { enum: ["active", "upcoming", "completed"] }).notNull().default("upcoming"),
   proctoringEnabled: integer("proctoring_enabled").notNull().default(0), // 0 for disabled, 1 for enabled
+  proctoringAudioEnabled: integer("proctoring_audio_enabled").notNull().default(1),
+  proctoringVideoEnabled: integer("proctoring_video_enabled").notNull().default(1),
   showResults: integer("show_results").notNull().default(1), // 0 for hidden, 1 for visible
   sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number, duration: number }[]
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]

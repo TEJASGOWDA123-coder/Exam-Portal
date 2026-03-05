@@ -10,17 +10,19 @@ interface PreExamCheckProps {
   onProceed: (stream: MediaStream | null) => void;
   examTitle: string;
   proctoringEnabled?: boolean;
+  proctoringAudioEnabled?: boolean;
+  proctoringVideoEnabled?: boolean;
 }
 
-export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled = true }: PreExamCheckProps) {
+export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled = true, proctoringAudioEnabled = true, proctoringVideoEnabled = true }: PreExamCheckProps) {
   const [checks, setChecks] = useState({
-    camera: false,
-    mic: false,
+    camera: !proctoringVideoEnabled,
+    mic: !proctoringAudioEnabled,
     network: false,
   });
   const [loading, setLoading] = useState({
-    camera: true,
-    mic: true,
+    camera: proctoringVideoEnabled,
+    mic: proctoringAudioEnabled,
     network: true,
   });
   const [latency, setLatency] = useState<number | null>(null);
@@ -32,19 +34,38 @@ export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled =
       checkMedia();
     }
     checkNetwork();
-  }, [proctoringEnabled]);
+  }, [proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled]);
 
   const checkMedia = async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const constraints = {
+        video: proctoringVideoEnabled ? true : false,
+        audio: proctoringAudioEnabled ? true : false
+      };
+      
+      if (!constraints.video && !constraints.audio) {
+        setChecks(prev => ({ ...prev, camera: true, mic: true }));
+        setLoading(prev => ({ ...prev, camera: false, mic: false }));
+        return;
+      }
+
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(s);
-      if (videoRef.current) {
+      if (videoRef.current && proctoringVideoEnabled) {
         videoRef.current.srcObject = s;
       }
-      setChecks(prev => ({ ...prev, camera: true, mic: true }));
+      setChecks(prev => ({ 
+        ...prev, 
+        camera: proctoringVideoEnabled ? true : prev.camera, 
+        mic: proctoringAudioEnabled ? true : prev.mic 
+      }));
     } catch (err) {
-      toast.error("Media permission denied. Please allow camera and mic access.");
-      setChecks(prev => ({ ...prev, camera: false, mic: false }));
+      toast.error("Media permission denied. Please allow camera/mic access.");
+      setChecks(prev => ({ 
+        ...prev, 
+        camera: proctoringVideoEnabled ? false : prev.camera, 
+        mic: proctoringAudioEnabled ? false : prev.mic 
+      }));
     } finally {
       setLoading(prev => ({ ...prev, camera: false, mic: false }));
     }
@@ -82,31 +103,35 @@ export default function PreExamCheck({ onProceed, examTitle, proctoringEnabled =
             <div className="space-y-4">
               {proctoringEnabled ? (
                 <>
-                  <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.camera ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Camera className="w-4 h-4" />
+                  {proctoringVideoEnabled && (
+                    <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.camera ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-muted">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">Camera</p>
+                          <p className="text-[10px] text-muted-foreground">{loading.camera ? "Checking..." : (checks.camera ? "Ready" : "Not Found")}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold">Camera</p>
-                        <p className="text-[10px] text-muted-foreground">{loading.camera ? "Checking..." : (checks.camera ? "Ready" : "Not Found")}</p>
-                      </div>
+                      {loading.camera ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.camera ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
                     </div>
-                    {loading.camera ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.camera ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
-                  </div>
+                  )}
 
-                  <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.mic ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Mic className="w-4 h-4" />
+                  {proctoringAudioEnabled && (
+                    <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.mic ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-muted">
+                          <Mic className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">Microphone</p>
+                          <p className="text-[10px] text-muted-foreground">{loading.mic ? "Checking..." : (checks.mic ? "Ready" : "Not Found")}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold">Microphone</p>
-                        <p className="text-[10px] text-muted-foreground">{loading.mic ? "Checking..." : (checks.mic ? "Ready" : "Not Found")}</p>
-                      </div>
+                      {loading.mic ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.mic ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
                     </div>
-                    {loading.mic ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : (checks.mic ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-destructive" />)}
-                  </div>
+                  )}
 
                   <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${checks.network ? "border-green-500/30 bg-green-500/5" : "border-border"}`}>
                     <div className="flex items-center gap-3">

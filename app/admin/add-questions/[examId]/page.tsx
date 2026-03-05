@@ -172,7 +172,7 @@ export default function AddQuestions() {
   const [correctAnswer, setCorrectAnswer] = useState("0");
   const [qSection, setQSection] = useState("General");
   const [qMarks, setQMarks] = useState("1");
-  const [localSectionsConfig, setLocalSectionsConfig] = useState<{ name: string; pickCount: number }[]>([]);
+  const [localSectionsConfig, setLocalSectionsConfig] = useState<{ name: string; pickCount: number; duration?: number }[]>([]);
   const [localTotalMarks, setLocalTotalMarks] = useState<string>("100");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -426,7 +426,11 @@ export default function AddQuestions() {
     const success = await updateExam({
       ...exam,
       questions,
-      sectionsConfig: localSectionsConfig.length > 0 ? localSectionsConfig : undefined,
+      sectionsConfig: localSectionsConfig.length > 0 ? localSectionsConfig.map(s => ({
+        name: s.name,
+        pickCount: s.pickCount,
+        duration: s.duration || 5
+      })) : undefined,
       totalMarks: parseInt(localTotalMarks) || 100
     });
     setSaving(false);
@@ -507,7 +511,6 @@ export default function AddQuestions() {
                       {currentSections.map(s => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
-                      <SelectItem value="NEW">+ New Section</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -889,19 +892,16 @@ export default function AddQuestions() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => {
-                        const name = prompt("Enter custom section name:");
-                        if (name && !localSectionsConfig.find(s => s.name === name)) {
-                          setLocalSectionsConfig([...localSectionsConfig, { name, pickCount: 5 }]);
-                        }
+                        toast.error("Custom sections are disabled. Please select from available templates or create one in the sections manager.");
                       }}>
-                        <Plus className="w-4 h-4 mr-2" /> Custom Section
+                        <Plus className="w-4 h-4 mr-2" /> Custom Section (Disabled)
                       </DropdownMenuItem>
                       {availableSections.length > 0 && <div className="h-px bg-border my-1" />}
                       {availableSections.map(s => (
                         <DropdownMenuItem
                           key={s.id}
                           disabled={!!localSectionsConfig.find(ls => ls.name === s.name)}
-                          onClick={() => setLocalSectionsConfig([...localSectionsConfig, { name: s.name, pickCount: 5 }])}
+                          onClick={() => setLocalSectionsConfig([...localSectionsConfig, { name: s.name, pickCount: 5, duration: 15 }])}
                         >
                           <LayoutGrid className="w-4 h-4 mr-2 text-primary" />
                           {s.name}
@@ -931,8 +931,21 @@ export default function AddQuestions() {
                               <Settings className="w-3 h-3" />
                             </button>
                           )}
-                          <div className="flex items-center bg-background rounded-lg border border-border px-1.5">
-                            <span className="text-[9px] font-bold text-muted-foreground mr-1">PICK</span>
+                          <div className="flex items-center bg-background rounded-lg border border-border px-1.5 opacity-60">
+                            <span className="text-[9px] font-bold text-muted-foreground mr-1">MINS</span>
+                            <input
+                              type="number"
+                              value={config.duration || 0}
+                              onChange={(e) => {
+                                const next = [...localSectionsConfig];
+                                next[idx].duration = parseInt(e.target.value) || 0;
+                                setLocalSectionsConfig(next);
+                              }}
+                              className="w-8 h-6 bg-transparent text-[11px] font-bold text-center focus:outline-none"
+                            />
+                          </div>
+                          <div className="flex items-center bg-background rounded-lg border border-border px-1.5 border-primary/20 bg-primary/5">
+                            <span className="text-[9px] font-bold text-primary mr-1">PICK</span>
                             <input
                               type="number"
                               value={config.pickCount}
@@ -941,7 +954,7 @@ export default function AddQuestions() {
                                 next[idx].pickCount = parseInt(e.target.value) || 0;
                                 setLocalSectionsConfig(next);
                               }}
-                              className="w-8 h-6 bg-transparent text-[11px] font-bold text-center focus:outline-none"
+                              className="w-8 h-6 bg-transparent text-[11px] font-bold text-center text-primary focus:outline-none"
                             />
                           </div>
                           <button

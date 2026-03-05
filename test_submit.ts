@@ -23,6 +23,7 @@ async function testSubmit() {
             usn: "TEST001",
             email: "test@example.com",
             class: "10",
+            year: "3rd",
             section: "A",
             score: 80,
             violations: 0,
