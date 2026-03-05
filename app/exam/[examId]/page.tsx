@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { GraduationCap, ShieldCheck, Download, ExternalLink } from "lucide-react";
+import { GraduationCap, ShieldCheck, Download, ExternalLink, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { Input } from "@/components/ui/input";
@@ -25,12 +25,24 @@ export default function ExamEntry() {
   const [year, setYear] = useState("");
   const [section, setSection] = useState("");
   const [isInSeb, setIsInSeb] = useState(true);
+  const [timeStatus, setTimeStatus] = useState<"upcoming" | "active" | "completed">("active");
 
   useEffect(() => {
-    if (exam?.sebConfigId) {
-      const ua = navigator.userAgent;
-      const isSeb = ua.includes("SEB") || (window as any).SafeExamBrowser;
-      setIsInSeb(!!isSeb);
+    if (exam) {
+      if (exam.sebConfigId) {
+        const ua = navigator.userAgent;
+        const isSeb = ua.includes("SEB") || (window as any).SafeExamBrowser;
+        setIsInSeb(!!isSeb);
+      }
+
+      const now = new Date();
+      if (exam.startTime && new Date(exam.startTime) > now) {
+         setTimeStatus("upcoming");
+      } else if (exam.endTime && new Date(exam.endTime) < now) {
+         setTimeStatus("completed");
+      } else {
+         setTimeStatus("active");
+      }
     }
   }, [exam]);
 
@@ -107,8 +119,53 @@ export default function ExamEntry() {
       <div className="absolute top-4 right-4 z-10">
         <ModeToggle />
       </div>
-      <div className="w-full max-w-md animate-slide-up">
-        <div className="bg-card rounded-2xl shadow-elevated p-8">
+
+      {timeStatus === "upcoming" && (
+        <div className="w-full max-w-md animate-slide-up">
+           <div className="bg-card rounded-2xl shadow-elevated p-8 text-center border border-border">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
+                 <Clock className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">Exam Starts Soon</h1>
+              <p className="text-sm text-muted-foreground mb-6">
+                 This exam hasn't started yet. The test link will become valid automatically at the scheduled time.
+              </p>
+              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-6">
+                 <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">Scheduled Start</p>
+                 <p className="font-medium text-foreground">
+                    {exam.startTime ? new Date(exam.startTime).toLocaleString() : "TBD"}
+                 </p>
+              </div>
+              <Button onClick={() => window.location.reload()} className="w-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                 Refresh Page
+              </Button>
+           </div>
+        </div>
+      )}
+
+      {timeStatus === "completed" && (
+        <div className="w-full max-w-md animate-slide-up">
+           <div className="bg-card rounded-2xl shadow-elevated p-8 text-center border border-border">
+              <div className="w-16 h-16 rounded-2xl bg-slate-500/10 flex items-center justify-center mx-auto mb-6">
+                 <AlertCircle className="w-8 h-8 text-slate-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">Exam Concluded</h1>
+              <p className="text-sm text-muted-foreground mb-6">
+                 This exam has already ended and the test link is no longer valid. If you believe this is an error or need a reschedule, please contact your administrator.
+              </p>
+              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-2">
+                 <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">Concluded At</p>
+                 <p className="font-medium text-foreground">
+                    {exam.endTime ? new Date(exam.endTime).toLocaleString() : "TBD"}
+                 </p>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {timeStatus === "active" && (
+        <div className="w-full max-w-md animate-slide-up">
+          <div className="bg-card rounded-2xl shadow-elevated p-8">
           <div className="text-center mb-8">
             <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
               <GraduationCap className="w-7 h-7 text-primary-foreground" />
@@ -242,6 +299,7 @@ export default function ExamEntry() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

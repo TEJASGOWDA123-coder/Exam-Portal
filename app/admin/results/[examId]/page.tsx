@@ -19,6 +19,7 @@ import {
    Eye,
    FileSearch,
    Check,
+   XCircle,
    X as XIcon,
    Sparkles as SparklesIcon,
    BarChart2
@@ -348,7 +349,7 @@ export default function ViewResults() {
                                        variant="ghost"
                                        size="sm"
                                        onClick={() => handleReschedule(r.id, r.studentName)}
-                                       className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 px-3"
+                                       className="h-8 text-[10px] font-bold text-red-600 hover:text-white hover:bg-white px-3"
                                     >
                                        <CalendarX className="w-3.5 h-3.5 mr-2" /> Reschedule
                                     </Button>
@@ -364,7 +365,7 @@ export default function ViewResults() {
 
          {/* Details Modal */}
          <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-0 border-border shadow-2xl bg-card">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden rounded-[2.5rem] p-0 border-none shadow-2xl bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-2xl">
                <DialogHeader className="sr-only">
                   <DialogTitle>{selectedSubmission?.studentName || "Candidate"} - Assessment Report</DialogTitle>
                   <DialogDescription>
@@ -372,24 +373,77 @@ export default function ViewResults() {
                   </DialogDescription>
                </DialogHeader>
 
-               <div className="p-6 border-b border-border bg-muted/10">
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                           {selectedSubmission?.studentName.charAt(0)}
-                        </div>
-                        <div>
-                           <h2 className="text-xl font-bold text-foreground leading-tight">{selectedSubmission?.studentName}</h2>
-                           <p className="text-sm font-medium text-muted-foreground">{selectedSubmission?.usn} • Detailed Report</p>
-                        </div>
-                     </div>
-                     <div className="text-right bg-background px-4 py-2 rounded-xl border border-border">
-                        <p className="text-2xl font-bold text-primary">{selectedSubmission?.score} <span className="text-sm text-foreground">Points</span></p>
-                     </div>
-                  </div>
+               {/* Background Blobs for Modal */}
+               <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="blob w-[400px] h-[400px] bg-emerald-500/10 -top-20 -left-20 animate-float opacity-50" />
+                  <div className="blob w-[300px] h-[300px] bg-blue-500/10 -bottom-20 -right-20 animate-float [animation-delay:3s] opacity-50" />
                </div>
 
-               <div className="p-6 space-y-8">
+               <div className="relative flex flex-col h-full max-h-[90vh] overflow-hidden">
+                  <div className="p-10 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                           <div className="h-16 w-16 rounded-[1.25rem] bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 font-black text-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                              {selectedSubmission?.studentName.charAt(0)}
+                           </div>
+                           <div className="space-y-1">
+                              <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase">
+                                 {selectedSubmission?.studentName}
+                              </h2>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                                   USN: {selectedSubmission?.usn}
+                                </span>
+                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500">
+                                   Assessment Report
+                                </span>
+                              </div>
+                           </div>
+                        </div>
+                        <div className="flex gap-4 items-stretch">
+                           <div className="flex flex-col justify-center bg-white/60 dark:bg-slate-900/60 px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur-sm">
+                              <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                  <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                     +{currentExam?.positiveMarks ?? 1} 
+                                     <span className="ml-1.5 text-[10px] opacity-60 font-bold uppercase tracking-widest">Correct</span>
+                                  </span>
+                                </div>
+                                <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700" />
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                                  <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                     -{currentExam?.negativeMarks ?? 0} 
+                                     <span className="ml-1.5 text-[10px] opacity-60 font-bold uppercase tracking-widest">Incorrect</span>
+                                  </span>
+                                </div>
+                              </div>
+                           </div>
+                           <div className="min-w-[120px] text-center bg-emerald-500 px-6 py-4 rounded-3xl shadow-[0_0_25px_rgba(16,185,129,0.2)] flex flex-col items-center justify-center border border-emerald-400/20">
+                              <p className="text-3xl font-black text-white leading-none mb-1 tracking-tighter">
+                                 {selectedSubmission?.score}
+                              </p>
+                              <span className="text-[10px] uppercase font-black text-white/80 tracking-widest">Total Points</span>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar relative z-10">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Email</p>
+                           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedSubmission?.email}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Batch / Class</p>
+                           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedSubmission?.year} • {selectedSubmission?.class} • Section {selectedSubmission?.section}</p>
+                        </div>
+                     </div>
+
+                     <div className="space-y-6">
                   {currentExam?.questions.map((q, idx) => {
                      const justs = typeof selectedSubmission?.justifications === 'string' ? JSON.parse(selectedSubmission.justifications) : selectedSubmission?.justifications || {};
                      const studentJust = justs[q.id];
@@ -447,43 +501,58 @@ export default function ViewResults() {
                      };
 
                      const isCorrect = checkCorrectness();
+                     const isAnswered = studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== "";
 
                      return (
-                        <div key={q.id} className="group pb-8 border-b border-border last:border-0 last:pb-0">
+                        <div key={q.id} className="group p-6 rounded-2xl bg-white/5 dark:bg-slate-900/40 border border-slate-800/60 transition-all hover:bg-white/10 dark:hover:bg-slate-900/60">
                            <div className="flex items-start gap-4">
-                              <span className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground mt-0.5">{idx + 1}</span>
-                              <div className="flex-1 space-y-4">
+                              <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-slate-800/80 flex items-center justify-center text-sm font-bold text-slate-300 border border-slate-700 mt-0.5">{idx + 1}</span>
+                              <div className="flex-1 space-y-5">
                                  <div>
-                                    <h4 className="font-bold text-foreground mb-1 whitespace-pre-wrap">{q.question}</h4>
+                                    <div className="flex justify-between items-start mb-2">
+                                       <h4 className="font-bold text-white text-lg leading-relaxed whitespace-pre-wrap">{q.question}</h4>
+                                       <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
+                                          {isAnswered ? (
+                                             isCorrect ? (
+                                                <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm flex items-center gap-1.5">
+                                                   <CheckCircle2 className="w-4 h-4" /> Correct <span className="opacity-70 text-[10px]">+{currentExam?.positiveMarks || 1}</span>
+                                                </span>
+                                             ) : (
+                                                <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20 shadow-sm flex items-center gap-1.5">
+                                                   <XCircle className="w-4 h-4" /> Incorrect <span className="opacity-70 text-[10px]">-{currentExam?.negativeMarks || 0}</span>
+                                                </span>
+                                             )
+                                          ) : (
+                                             <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 shadow-sm flex items-center gap-1.5">
+                                                Skipped <span className="opacity-70 text-[10px]">0</span>
+                                             </span>
+                                          )}
+                                       </div>
+                                    </div>
                                     <div className="flex gap-2">
-                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border">
+                                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-800/50 text-slate-400 border border-slate-700/50">
                                           {q.section}
                                        </span>
-                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border uppercase tracking-widest">
+                                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-800/50 text-slate-400 border border-slate-700/50 uppercase tracking-widest">
                                           {q.type}
                                        </span>
                                     </div>
                                  </div>
 
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-muted/30 rounded-xl border border-border p-4 flex flex-col">
-                                       <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <div className={`rounded-xl border p-5 flex flex-col transition-colors ${isAnswered ? (isCorrect ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20') : 'bg-slate-800/40 border-slate-700/50'}`}>
+                                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                           Student Selection
-                                          {studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== "" && (
-                                             isCorrect ? 
-                                             <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-500/20 font-black">CORRECT</span> :
-                                             <span className="text-[9px] bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded border border-red-500/20 font-black">INCORRECT</span>
-                                          )}
                                        </div>
-                                       <div className="text-sm flex-1">
+                                       <div className="text-sm flex-1 text-slate-200 font-medium">
                                           {renderAnswer(studentAnswer)}
                                        </div>
                                     </div>
-                                    <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 flex flex-col">
-                                       <div className="text-[10px] font-bold text-primary mb-2 flex items-center gap-2 uppercase tracking-wider">
+                                    <div className="bg-primary/5 rounded-xl border border-primary/20 p-5 flex flex-col">
+                                       <div className="text-[10px] font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
                                           Correct Answer(s)
                                        </div>
-                                       <div className="text-sm flex-1">
+                                       <div className="text-sm flex-1 text-slate-200 font-medium">
                                           {renderAnswer(q.correctAnswer)}
                                        </div>
                                     </div>
@@ -530,6 +599,8 @@ export default function ViewResults() {
                         </div>
                      );
                   })}
+                     </div>
+                  </div>
                </div>
             </DialogContent>
          </Dialog>

@@ -55,6 +55,7 @@ export const exams = sqliteTable("exams", {
   proctoringAudioEnabled: integer("proctoring_audio_enabled").notNull().default(1),
   proctoringVideoEnabled: integer("proctoring_video_enabled").notNull().default(1),
   showResults: integer("show_results").notNull().default(1), // 0 for hidden, 1 for visible
+  strictSectionTiming: integer("strict_section_timing").default(0), // 0 for flexible, 1 for strict timer lock
   sectionsConfig: text("sections_config"), // JSON string: { name: string, pickCount: number, duration: number }[]
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
   positiveMarks: integer("positive_marks").notNull().default(1),

@@ -35,6 +35,7 @@ export interface Exam {
   proctoringAudioEnabled?: boolean | number;
   proctoringVideoEnabled?: boolean | number;
   showResults?: boolean | number;
+  strictSectionTiming?: boolean | number;
   sebConfigId?: string | null;
   positiveMarks?: number;
   negativeMarks?: string;

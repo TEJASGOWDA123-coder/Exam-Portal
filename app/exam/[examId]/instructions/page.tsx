@@ -71,7 +71,7 @@ export default function Instructions() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4 py-20 relative overflow-hidden">
+    <div className="min-h-screen bg-background dark:bg-background flex items-center justify-center px-4 py-20 relative overflow-hidden">
       {/* Animated Background Blobs */}
       <div className="blob w-[600px] h-[600px] bg-emerald-500/10 -top-40 -left-40 animate-float" />
       <div className="blob w-[500px] h-[500px] bg-blue-500/10 -bottom-40 -right-40 animate-float [animation-delay:3s]" />
@@ -81,7 +81,7 @@ export default function Instructions() {
       </div>
 
       <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 relative z-10">
-        <div className="glass rounded-3xl p-8 md:p-10">
+        <div className="dark:bg-card bg-card  shadow-elevated rounded-3xl p-8 md:p-10">
           <div className="flex flex-col gap-1 mb-8">
             <div className="flex justify-between items-center mb-1">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -97,18 +97,18 @@ export default function Instructions() {
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-500">{exam.duration} Minutes Session</span>
             </div>
             {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined || exam.sectionsConfig?.length) && (
-              <div className="flex flex-col gap-3 mt-1 bg-white/40 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60 p-4 rounded-2xl backdrop-blur-sm shadow-sm ring-1 ring-black/[0.02]">
+              <div className="flex flex-col gap-3 mt-1 bg-white/40 dark:bg-card border border-slate-100 dark:border-slate-800/60 p-4 rounded-2xl backdrop-blur-sm shadow-sm ring-1 ring-black/[0.02]">
                 <div className="flex items-center gap-4">
                   {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined) && (
                     <>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">+{exam.positiveMarks || 1} <span className="text-[10px] opacity-70">Correct</span></span>
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">+{exam.positiveMarks ?? 1} <span className="text-[10px] opacity-70 uppercase tracking-wider">Correct</span></span>
                       </div>
                       <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800" />
                       <div className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-destructive" />
-                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">-{exam.negativeMarks || 0} <span className="text-[10px] opacity-70">Incorrect</span></span>
+                        <XCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">-{exam.negativeMarks ?? 0} <span className="text-[10px] opacity-70 uppercase tracking-wider">Incorrect</span></span>
                       </div>
                     </>
                   )}
@@ -117,7 +117,7 @@ export default function Instructions() {
                 {exam.sectionsConfig && exam.sectionsConfig.length > 0 && (
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-2">
                     {exam.sectionsConfig.map((sec, i) => (
-                      <div key={i} className="px-2.5 py-1 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2">
+                      <div key={i} className="px-2.5 py-1 rounded-lg bg-card border border-primary/10 flex items-center gap-2">
                         <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{sec.name}:</span>
                         <span className="text-[10px] font-black text-primary uppercase">{sec.duration} Min</span>
                       </div>
@@ -137,9 +137,9 @@ export default function Instructions() {
             {rules.map((rule, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60 hover:bg-white dark:hover:bg-slate-950/60 transition-all duration-200"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-card border border-slate-100 dark:border-slate-800/60 hover:bg-white dark:hover:bg-slate-950/60 transition-all duration-200"
               >
-                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm shrink-0 border border-slate-100 dark:border-slate-800">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-emerald-500/20 flex items-center justify-center shadow-sm shrink-0 border border-slate-100 dark:border-slate-800">
                   <rule.icon className="w-4.5 h-4.5 text-emerald-500" />
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed">{rule.text}</p>

@@ -24,6 +24,8 @@ export async function GET(
 
         const examWithParsedQuestions = {
             ...exam,
+            positiveMarks: exam.positiveMarks,
+            negativeMarks: exam.negativeMarks,
             questions: (exam as any).questions?.map((q: any) => ({
                 ...q,
                 options: typeof q.options === "string" ? JSON.parse(q.options) : (q.options || [])

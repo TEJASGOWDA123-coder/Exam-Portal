@@ -38,6 +38,7 @@ export default function EditExam() {
     const [endTime, setEndTime] = useState("");
     const [proctoringEnabled, setProctoringEnabled] = useState(false);
     const [showResults, setShowResults] = useState(true);
+    const [strictSectionTiming, setStrictSectionTiming] = useState(false);
     const [sebConfigId, setSebConfigId] = useState<string | null>(null);
     const [positiveMarks, setPositiveMarks] = useState("1");
     const [negativeMarks, setNegativeMarks] = useState("0");
@@ -57,6 +58,7 @@ export default function EditExam() {
             setEndTime(exam.endTime);
             setProctoringEnabled(!!exam.proctoringEnabled);
             setShowResults(exam.showResults !== undefined ? !!exam.showResults : true);
+            setStrictSectionTiming(exam.strictSectionTiming !== undefined ? !!exam.strictSectionTiming : false);
             setSebConfigId(exam.sebConfigId || null);
             setPositiveMarks(exam.positiveMarks?.toString() || "1");
             setNegativeMarks(exam.negativeMarks || "0");
@@ -79,6 +81,7 @@ export default function EditExam() {
                         setEndTime(data.endTime);
                         setProctoringEnabled(!!data.proctoringEnabled);
                         setShowResults(data.showResults !== undefined ? !!data.showResults : true);
+                        setStrictSectionTiming(data.strictSectionTiming !== undefined ? !!data.strictSectionTiming : false);
                         setSebConfigId(data.sebConfigId || null);
                         setPositiveMarks(data.positiveMarks?.toString() || "1");
                         setNegativeMarks(data.negativeMarks || "0");
@@ -192,8 +195,9 @@ export default function EditExam() {
             endTime,
             proctoringEnabled,
             showResults,
+            strictSectionTiming,
             sebConfigId,
-            positiveMarks: parseInt(positiveMarks) || 1,
+            positiveMarks: positiveMarks !== "" ? parseInt(positiveMarks) : 1,
             negativeMarks: negativeMarks || "0",
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
             status: exam?.status || "upcoming",
@@ -444,6 +448,17 @@ export default function EditExam() {
                                             <p className="text-xs text-muted-foreground">Allow students to see results immediately</p>
                                         </div>
                                         <Switch checked={showResults} onCheckedChange={setShowResults} />
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                                       <div className="space-y-0.5">
+                                          <div className="flex items-center gap-2">
+                                             <Clock className="w-4 h-4 text-orange-500" />
+                                             <Label className="text-base font-bold">Strict Section Timings</Label>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
+                                       </div>
+                                       <Switch checked={strictSectionTiming} onCheckedChange={setStrictSectionTiming} />
                                     </div>
 
                                     <div className="space-y-2 pt-2 border-t border-border mt-4">

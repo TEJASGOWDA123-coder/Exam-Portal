@@ -48,6 +48,7 @@ export default function CreateExam() {
    const [proctoringAudio, setProctoringAudio] = useState(true);
    const [proctoringVideo, setProctoringVideo] = useState(true);
    const [showResults, setShowResults] = useState(true);
+   const [strictSectionTiming, setStrictSectionTiming] = useState(false);
    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
    const [positiveMarks, setPositiveMarks] = useState("1");
    const [negativeMarks, setNegativeMarks] = useState("0");
@@ -153,6 +154,7 @@ export default function CreateExam() {
          proctoringAudioEnabled: proctoringAudio,
          proctoringVideoEnabled: proctoringVideo,
          showResults,
+         strictSectionTiming,
          sebConfigId,
          positiveMarks: parseInt(positiveMarks) || 1,
          negativeMarks: negativeMarks || "0",
@@ -378,10 +380,22 @@ export default function CreateExam() {
                               >
                                  <Plus className="w-4 h-4 mr-2" />
                                  Add Section Configuration
-                              </Button>
-                           </div>
-                           <p className="text-[10px] text-muted-foreground mt-2 italic">* Sectional durations enforce strict time limits per section. Total exam time should consider these individual limits.</p>
-                        </TabsContent>
+                               </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                               <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                     <Clock className="w-4 h-4 text-orange-500" />
+                                     <Label className="text-base font-bold">Strict Section Timings</Label>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
+                               </div>
+                               <Switch checked={strictSectionTiming} onCheckedChange={setStrictSectionTiming} />
+                            </div>
+
+                            <p className="text-[10px] text-muted-foreground mt-2 italic">* Sectional durations enforce strict time limits per section. Total exam time should consider these individual limits.</p>
+                         </TabsContent>
 
                         <TabsContent value="settings" className="space-y-6">
                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">

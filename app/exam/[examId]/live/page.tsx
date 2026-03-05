@@ -112,7 +112,10 @@ export default function LiveExamPage() {
   const isSubmittingRef = useRef(false);
   const startTime = useMemo(() => Date.now(), []);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenEnforcer, setShowFullscreenEnforcer] = useState(false);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+  const lastViolationTimeRef = useRef<number>(0);
+  const VIOLATION_COOLDOWN = 60000; // 1 minute cooldown
 
   // Initial fullscreen check
   useEffect(() => {
@@ -139,15 +142,28 @@ export default function LiveExamPage() {
       );
 
       setIsFullscreen(isCurrentlyFullscreen);
+      if (isCurrentlyFullscreen) {
+        setShowFullscreenEnforcer(false);
+      }
 
       if (!isCurrentlyFullscreen && !submitted && !preCheck && !isSubmittingRef.current && exam?.proctoringEnabled) {
-        setViolations((v) => {
-          const next = v + 1;
-          toast.error(`⚠️ Security breach: Fullscreen exited! Violation ${next}/3`, {
-            description: "Please return to fullscreen immediately to avoid disqualification.",
+        setShowFullscreenEnforcer(true);
+        
+        const now = Date.now();
+        if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
+          lastViolationTimeRef.current = now;
+          setViolations((v) => {
+            const next = v + 1;
+            toast.error(`⚠️ Security breach: Fullscreen exited! Violation ${next}/3`, {
+              description: "Please return to fullscreen immediately to avoid disqualification.",
+            });
+            return next;
           });
-          return next;
-        });
+        } else {
+          toast.warning("Please return to fullscreen immediately!", {
+            description: "You have exited fullscreen mode. This is a rule violation."
+          });
+        }
       }
     };
 
@@ -164,7 +180,9 @@ export default function LiveExamPage() {
     const requestMethod = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
 
     if (requestMethod) {
-      requestMethod.call(el).catch((err: any) => {
+      requestMethod.call(el).then(() => {
+        setShowFullscreenEnforcer(false);
+      }).catch((err: any) => {
         console.error("Fullscreen error:", err);
         toast.error("Failed to enter fullscreen. Please enable it in browser settings.");
       });
@@ -243,7 +261,7 @@ export default function LiveExamPage() {
       }
     });
 
-    const score = Math.max(0, totalObtained); // Typically scores don't go below 0
+    const score = totalObtained; // Negative marks are now allowed to reflect below 0
 
     const success = await addResult({
       id: `r-${Date.now()}`,
@@ -301,13 +319,20 @@ export default function LiveExamPage() {
 
   const handleAIViolation = useCallback((reason: string, points: number) => {
     if (submitted || isSubmittingRef.current) return;
-    setViolations((v) => {
-      const next = v + 1;
-      toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/3`, {
-        description: "Please maintain proper exam conduct.",
+    
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
+      lastViolationTimeRef.current = now;
+      setViolations((v) => {
+        const next = v + 1;
+        toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/3`, {
+          description: "Please maintain proper exam conduct.",
+        });
+        return next;
       });
-      return next;
-    });
+    } else {
+      console.log("AI Violation detected but suppressed due to cooldown:", reason);
+    }
   }, [submitted]);
 
   const markForReviewAndNext = useCallback(() => {
@@ -372,6 +397,12 @@ export default function LiveExamPage() {
       setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
     } else {
       if (currentSectionIndex < orderedSectionNames.length - 1) {
+        // Enforce strict sectional timing
+        if (exam?.strictSectionTiming) {
+           toast.info("Strict Timings Enabled: Please wait for the current section's timer to expire to proceed.", { duration: 4000 });
+           return;
+        }
+
         // Move to next section
         const nextSectionName = orderedSectionNames[currentSectionIndex + 1];
         const nextIndex = sectionGroups[nextSectionName].startIndex;
@@ -383,7 +414,7 @@ export default function LiveExamPage() {
         setShowConfirm(true);
       }
     }
-  }, [currentQ, currentSectionIndex, orderedSectionNames, sectionGroups, shuffledQuestions, activeSection]);
+  }, [currentQ, currentSectionIndex, orderedSectionNames, sectionGroups, shuffledQuestions, activeSection, exam?.strictSectionTiming]);
 
   // Handle violation limit
   useEffect(() => {
@@ -423,11 +454,15 @@ export default function LiveExamPage() {
     const handler = () => {
       // Tab switching counts as a violation for ALL exams if they are in live mode
       if (document.hidden && !submitted && !preCheck && !isSubmittingRef.current) {
-        setViolations((v) => {
-          const next = v + 1;
-          toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
-          return next;
-        });
+        const now = Date.now();
+        if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
+          lastViolationTimeRef.current = now;
+          setViolations((v) => {
+            const next = v + 1;
+            toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
+            return next;
+          });
+        }
       }
     };
     document.addEventListener("visibilitychange", handler);
@@ -526,9 +561,9 @@ export default function LiveExamPage() {
                 )}
                 {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined) && (
                   <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-muted-foreground px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-2">
-                    <span className="text-emerald-500 font-black">+{exam.positiveMarks || 1}</span>
+                    <span className="text-emerald-500 font-black">+{exam.positiveMarks ?? 1}</span>
                     <span className="opacity-30">/</span>
-                    <span className="text-destructive font-black">-{exam.negativeMarks || 0}</span>
+                    <span className="text-red-500 font-black">-{exam.negativeMarks ?? 0}</span>
                   </span>
                 )}
               </div>
@@ -550,9 +585,10 @@ export default function LiveExamPage() {
         </div>
       </header>
 
-      <nav className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b sticky top-20 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1 py-2">
+      <nav className="bg-white/80 dark:bg-card backdrop-blur-md border-b sticky top-20 z-50 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between gap-8 overflow-hidden">
+          {/* Section Tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth h-full">
             {Object.keys(sectionGroups).map((name) => {
               const { answered, total } = getSectionProgress(name);
               const isActive = activeSection === name;
@@ -560,15 +596,48 @@ export default function LiveExamPage() {
                 <button
                   key={name}
                   disabled={name !== activeSection}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
+                  className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
                 >
-                  <div className="flex flex-col items-start">
-                    <span className="text-[8px] font-black uppercase tracking-widest opacity-50">Section</span>
-                    <span className="text-xs font-bold leading-none">{name}</span>
+                  <div className="flex flex-col items-start translate-y-[1px]">
+                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">Section</span>
+                    <span className="text-xs font-black leading-none">{name}</span>
                   </div>
-                  <div className={`px-2 py-1 rounded-lg text-[10px] font-black ${isActive ? "bg-white/20" : "bg-muted"}`}>
+                  <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${isActive ? "bg-white/20" : "bg-muted"}`}>
                     {answered}/{total}
                   </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="w-[1px] h-8 bg-border shrink-0 hidden md:block" />
+
+          {/* Question Navigation Map */}
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-2">
+            {sectionGroups[activeSection]?.questions.map((q, idx) => {
+              const i = q.globalIndex;
+              const isCurrent = i === currentQ;
+              const isAnswered = answers[q.id] !== undefined;
+              const isMarked = markedForReview.has(q.id);
+              const isVis = visited.has(q.id);
+
+              let statusClass = "bg-muted/50 text-muted-foreground border-transparent";
+              if (isMarked) {
+                statusClass = "bg-indigo-500 text-white border-indigo-600";
+                if (isAnswered) statusClass += " ring-2 ring-emerald-500 ring-offset-2";
+              } else if (isAnswered) {
+                statusClass = "bg-emerald-500 text-white border-emerald-600";
+              } else if (isVis) {
+                statusClass = "bg-rose-500 text-white border-rose-600";
+              }
+
+              return (
+                <button
+                  key={i}
+                  onClick={() => navigateTo(i)}
+                  className={`flex-shrink-0 w-8 h-8 rounded-lg text-xs font-black transition-all border flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-lg z-10 border-primary ring-2 ring-primary/20 bg-background !text-primary" : "hover:bg-muted"}`}
+                >
+                  {i + 1}
                 </button>
               );
             })}
@@ -764,6 +833,47 @@ export default function LiveExamPage() {
               {isSubmitting ? "Submitting..." : "Confirm Submission"}
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showFullscreenEnforcer} onOpenChange={() => {}}>
+        <AlertDialogContent className=" rounded-[2rem] border-none shadow-2xl bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-2xl max-w-lg p-0 overflow-hidden">
+          <AlertDialogHeader className="sr-only">
+            <AlertDialogTitle>Security Protocol Violation</AlertDialogTitle>
+            <AlertDialogDescription>Fullscreen mode has been disabled. Please re-enable it to continue.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="blob w-[300px] h-[300px] bg-red-500/10 -top-20 -left-20 animate-float opacity-50" />
+            <div className="blob w-[200px] h-[200px] bg-amber-500/10 -bottom-20 -right-20 animate-float [animation-delay:2s] opacity-50" />
+          </div>
+          
+          <div className="relative p-10 flex flex-col items-center text-center gap-6">
+            <div className="h-20 w-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-600 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
+              <ShieldAlert className="w-10 h-10" />
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Security Protocol Violation</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-[320px] mx-auto">
+                Fullscreen mode has been disabled. This is recorded as a security breach.
+              </p>
+            </div>
+
+            <div className="w-full p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-[11px] font-bold text-amber-600 uppercase tracking-widest">
+              Please re-enable fullscreen to continue the session
+            </div>
+
+            <Button 
+              onClick={enterFullscreen}
+              className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest shadow-[0_10px_25px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Re-enable Fullscreen
+            </Button>
+            
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
+              Violation {violations}/3 Recorded
+            </p>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

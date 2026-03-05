@@ -41,8 +41,11 @@ export async function GET() {
                     status,
                     proctoringAudioEnabled: exam.proctoringAudioEnabled,
                     proctoringVideoEnabled: exam.proctoringVideoEnabled,
+                    strictSectionTiming: exam.strictSectionTiming,
                     sectionsConfig: parseJson(exam.sectionsConfig),
                     blueprint: parseJson(exam.blueprint),
+                    positiveMarks: exam.positiveMarks,
+                    negativeMarks: exam.negativeMarks,
                     questions: examQuestions.map(q => ({
                         id: q.id,
                         type: q.type,
@@ -76,7 +79,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, sebConfigId, questions: examQuestions, blueprint } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks } = data;
 
 
 
@@ -96,9 +99,12 @@ export async function POST(req: Request) {
                 proctoringAudioEnabled: proctoringAudioEnabled !== undefined ? (proctoringAudioEnabled ? 1 : 0) : 1,
                 proctoringVideoEnabled: proctoringVideoEnabled !== undefined ? (proctoringVideoEnabled ? 1 : 0) : 1,
                 showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
+                strictSectionTiming: strictSectionTiming !== undefined ? (strictSectionTiming ? 1 : 0) : 0,
                 sebConfigId: sebConfigId || null,
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
-                blueprint: blueprint ? JSON.stringify(blueprint) : null
+                blueprint: blueprint ? JSON.stringify(blueprint) : null,
+                positiveMarks: positiveMarks !== undefined ? positiveMarks : 1,
+                negativeMarks: negativeMarks !== undefined ? negativeMarks : "0"
             };
 
             if (existingExam) {

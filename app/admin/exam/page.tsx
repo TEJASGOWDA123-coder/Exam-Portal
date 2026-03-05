@@ -26,14 +26,27 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const ExamPage = () => {
-    const { exams, deleteExam } = useExam();
+    const { exams, deleteExam, updateExam } = useExam();
     const [isDeleting, setIsDeleting] = React.useState(false);
     const [examToDelete, setExamToDelete] = React.useState<{ id: string, title: string } | null>(null);
+
+    const [rescheduleData, setRescheduleData] = React.useState<{ id: string, title: string, startTime: string, duration: number } | null>(null);
+    const [isRescheduling, setIsRescheduling] = React.useState(false);
 
     const copyLink = (id: string) => {
         const link = `${window.location.origin}/exam/${id}`;
@@ -63,6 +76,38 @@ const ExamPage = () => {
             setExamToDelete(null);
         } else {
             toast.error("Failed to delete exam");
+        }
+    };
+
+    const handleReschedule = async () => {
+        if (!rescheduleData) return;
+
+        setIsRescheduling(true);
+        const examObj = exams.find(e => e.id === rescheduleData.id);
+        if(!examObj) return;
+
+        const start = new Date(rescheduleData.startTime);
+        const end = new Date(start.getTime() + rescheduleData.duration * 60000);
+        
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const endTimeString = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+
+        const updatedExam = {
+            ...examObj,
+            startTime: rescheduleData.startTime,
+            duration: rescheduleData.duration,
+            endTime: endTimeString,
+            status: "upcoming" as const
+        };
+
+        const success = await updateExam(updatedExam);
+        setIsRescheduling(false);
+
+        if (success) {
+            toast.success(`Exam rescheduled to ${new Date(rescheduleData.startTime).toLocaleString()}`);
+            setRescheduleData(null);
+        } else {
+            toast.error("Failed to reschedule exam");
         }
     };
 
@@ -148,26 +193,38 @@ const ExamPage = () => {
                                             onClick={() => copyLink(exam.id)}
                                         >
                                             <LinkIcon className="w-3.5 h-3.5 mr-2" />
-                                            Share
+                                            Share Link
                                         </Button>
-                                        {exam.sebConfigId && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
-                                                onClick={() => copySebLink(exam.id)}
-                                            >
-                                                <ShieldCheck className="w-3.5 h-3.5 mr-2" />
-                                                SEB Link
-                                            </Button>
-                                        )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                                            onClick={() => setRescheduleData({ id: exam.id, title: exam.title, startTime: exam.startTime, duration: exam.duration })}
+                                        >
+                                            <Calendar className="w-3.5 h-3.5 mr-2" />
+                                            Reschedule
+                                        </Button>
+                                </div>
+                                {exam.sebConfigId && (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
+                                            onClick={() => copySebLink(exam.id)}
+                                        >
+                                            <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+                                            SEB Link
+                                        </Button>
+                                    </div>
+                                )}
+                                <div className="flex gap-2">
                                     <Link href={`/admin/add-questions/${exam.id}`} className="flex-1">
                                         <Button size="sm" className="w-full">
                                             <ExternalLink className="w-3.5 h-3.5 mr-2" />
                                             Manage
                                         </Button>
                                     </Link>
-                                    
                                 </div>
                                 <Link href={`/admin/edit-exam/${exam.id}`}>
                                     <Button variant="outline" size="sm" className="w-full mt-2">
@@ -204,6 +261,52 @@ const ExamPage = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={!!rescheduleData} onOpenChange={(open) => !open && setRescheduleData(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Reschedule Exam</DialogTitle>
+                        <DialogDescription>
+                            Change the operational window for <strong>{rescheduleData?.title}</strong>. This updates the validity period of the existing test link automatically.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="reschedule-start" className="text-right">
+                                New Start Time
+                            </Label>
+                            <Input
+                                id="reschedule-start"
+                                type="datetime-local"
+                                value={rescheduleData?.startTime || ""}
+                                onChange={(e) => setRescheduleData(prev => prev ? { ...prev, startTime: e.target.value } : null)}
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="reschedule-duration" className="text-right">
+                                Duration (Minutes)
+                            </Label>
+                            <div className="relative">
+                               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                               <Input
+                                   id="reschedule-duration"
+                                   type="number"
+                                   value={rescheduleData?.duration || ""}
+                                   onChange={(e) => setRescheduleData(prev => prev ? { ...prev, duration: parseInt(e.target.value) || 0 } : null)}
+                                   className="pl-10 w-full"
+                               />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRescheduleData(null)} disabled={isRescheduling}>Cancel</Button>
+                        <Button onClick={handleReschedule} disabled={isRescheduling} className="bg-amber-600 hover:bg-amber-700 text-white">
+                            {isRescheduling ? "Updating..." : "Confirm Schedule"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
