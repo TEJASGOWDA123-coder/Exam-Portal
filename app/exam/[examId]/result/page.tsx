@@ -213,7 +213,7 @@ export default function Result() {
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-6 text-left">Sectional Performance</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {Object.entries(sectionScores).map(([section, score]) => {
-                  const config = currentExam?.sectionsConfig?.find(s => s.name === section);
+                  const config = currentExam?.sectionsConfig?.find(s => s.name.toLowerCase() === section.toLowerCase());
                   const maxMarks = config ? config.pickCount : null;
                   return (
                     <div key={section} className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 transition-all">

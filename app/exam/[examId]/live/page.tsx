@@ -56,10 +56,10 @@ export default function LiveExamPage() {
   const shuffledQuestions = useMemo(() => {
     if (!exam) return [];
 
-    // Group all questions by section
+    // Group all questions by section (case-insensitive)
     const pools: Record<string, typeof exam.questions> = {};
     exam.questions.forEach(q => {
-      const s = q.section || "General";
+      const s = (q.section || "General").toLowerCase();
       if (!pools[s]) pools[s] = [];
       pools[s].push(q);
     });
@@ -69,10 +69,12 @@ export default function LiveExamPage() {
     if (exam.sectionsConfig && exam.sectionsConfig.length > 0) {
       // Pick based on config
       exam.sectionsConfig.forEach(config => {
-        const pool = pools[config.name] || [];
+        const pool = pools[config.name.toLowerCase()] || [];
         const count = Math.min(config.pickCount, pool.length);
         const shuffledPool = shuffleArray(pool);
-        selected = [...selected, ...shuffledPool.slice(0, count)];
+        // Normalize section name to match config for subsequent logic
+        const subset = shuffledPool.slice(0, count).map(q => ({ ...q, section: config.name }));
+        selected = [...selected, ...subset];
       });
     } else {
       // Use all questions
@@ -148,7 +150,7 @@ export default function LiveExamPage() {
 
       if (!isCurrentlyFullscreen && !submitted && !preCheck && !isSubmittingRef.current && exam?.proctoringEnabled) {
         setShowFullscreenEnforcer(true);
-        
+
         const now = Date.now();
         if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
           lastViolationTimeRef.current = now;
@@ -319,7 +321,7 @@ export default function LiveExamPage() {
 
   const handleAIViolation = useCallback((reason: string, points: number) => {
     if (submitted || isSubmittingRef.current) return;
-    
+
     const now = Date.now();
     if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
       lastViolationTimeRef.current = now;
@@ -399,8 +401,8 @@ export default function LiveExamPage() {
       if (currentSectionIndex < orderedSectionNames.length - 1) {
         // Enforce strict sectional timing
         if (exam?.strictSectionTiming) {
-           toast.info("Strict Timings Enabled: Please wait for the current section's timer to expire to proceed.", { duration: 4000 });
-           return;
+          toast.info("Strict Timings Enabled: Please wait for the current section's timer to expire to proceed.", { duration: 4000 });
+          return;
         }
 
         // Move to next section
@@ -836,7 +838,7 @@ export default function LiveExamPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showFullscreenEnforcer} onOpenChange={() => {}}>
+      <AlertDialog open={showFullscreenEnforcer} onOpenChange={() => { }}>
         <AlertDialogContent className=" rounded-[2rem] border-none shadow-2xl bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-2xl max-w-lg p-0 overflow-hidden">
           <AlertDialogHeader className="sr-only">
             <AlertDialogTitle>Security Protocol Violation</AlertDialogTitle>
@@ -846,12 +848,12 @@ export default function LiveExamPage() {
             <div className="blob w-[300px] h-[300px] bg-red-500/10 -top-20 -left-20 animate-float opacity-50" />
             <div className="blob w-[200px] h-[200px] bg-amber-500/10 -bottom-20 -right-20 animate-float [animation-delay:2s] opacity-50" />
           </div>
-          
+
           <div className="relative p-10 flex flex-col items-center text-center gap-6">
             <div className="h-20 w-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-600 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
               <ShieldAlert className="w-10 h-10" />
             </div>
-            
+
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Security Protocol Violation</h2>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-[320px] mx-auto">
@@ -863,13 +865,13 @@ export default function LiveExamPage() {
               Please re-enable fullscreen to continue the session
             </div>
 
-            <Button 
+            <Button
               onClick={enterFullscreen}
               className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest shadow-[0_10px_25px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               Re-enable Fullscreen
             </Button>
-            
+
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
               Violation {violations}/3 Recorded
             </p>

@@ -10,6 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Exam, useExam } from "@/hooks/contexts/ExamContext";
 import { toast } from "sonner";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     ArrowLeft,
     Save,
     Clock,
@@ -45,6 +52,7 @@ export default function EditExam() {
     const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
     const [uploadingSeb, setUploadingSeb] = useState(false);
     const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
+    const [availableSections, setAvailableSections] = useState<{ id: string, name: string }[]>([]);
     const [loading, setLoading] = useState(true);
 
     const exam = exams.find((e) => e.id === examId);
@@ -109,8 +117,11 @@ export default function EditExam() {
             try {
                 const resp = await fetch("/api/admin/seb");
                 if (resp.ok) setConfigs(await resp.json());
+
+                const secResp = await fetch("/api/sections");
+                if (secResp.ok) setAvailableSections(await secResp.json());
             } catch (err) {
-                console.error("Failed to fetch SEB configs", err);
+                console.error("Failed to fetch SEB configs or sections", err);
             }
         };
         fetchConfigs();
@@ -367,15 +378,23 @@ export default function EditExam() {
                                             <div key={idx} className="flex items-end gap-3 p-4 bg-muted/20 rounded-xl border border-border">
                                                 <div className="flex-1 space-y-2">
                                                     <Label className="text-xs">Section Name</Label>
-                                                    <Input
+                                                    <Select
                                                         value={sec.name}
-                                                        onChange={(e) => {
+                                                        onValueChange={(val) => {
                                                             const next = [...sectionsConfig];
-                                                            next[idx].name = e.target.value;
+                                                            next[idx].name = val;
                                                             setSectionsConfig(next);
                                                         }}
-                                                        className="h-9 bg-background"
-                                                    />
+                                                    >
+                                                        <SelectTrigger className="h-9 bg-background">
+                                                            <SelectValue placeholder="Select Section" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {availableSections.map(s => (
+                                                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                                 <div className="w-24 space-y-2">
                                                     <Label className="text-xs">Pick Count</Label>
@@ -451,14 +470,14 @@ export default function EditExam() {
                                     </div>
 
                                     <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
-                                       <div className="space-y-0.5">
-                                          <div className="flex items-center gap-2">
-                                             <Clock className="w-4 h-4 text-orange-500" />
-                                             <Label className="text-base font-bold">Strict Section Timings</Label>
-                                          </div>
-                                          <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
-                                       </div>
-                                       <Switch checked={strictSectionTiming} onCheckedChange={setStrictSectionTiming} />
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-orange-500" />
+                                                <Label className="text-base font-bold">Strict Section Timings</Label>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
+                                        </div>
+                                        <Switch checked={strictSectionTiming} onCheckedChange={setStrictSectionTiming} />
                                     </div>
 
                                     <div className="space-y-2 pt-2 border-t border-border mt-4">

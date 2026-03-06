@@ -1,36 +1,26 @@
-import "dotenv/config";
-import { db } from "./lib/db";
-import { submissions, exams, users, students } from "./lib/db/schema";
+import { db } from "./lib/db/index";
 
-async function check() {
-    console.log("Checking database...");
+async function main() {
+    try {
+        const examsData = await db.query.exams.findMany({
+            with: { questions: true }
+        });
 
-    const allUsers = await db.select().from(users);
-    console.log("Total Users:", allUsers.length);
-    console.log("Users:", allUsers.map(u => ({ email: u.email, role: u.role })));
+        for (const exam of examsData) {
+            console.log(`Exam ID: ${exam.id}, Title: ${exam.title}`);
+            const sectionsConfig = typeof exam.sectionsConfig === 'string' ? JSON.parse(exam.sectionsConfig) : exam.sectionsConfig;
+            console.log(`sectionsConfig:`, JSON.stringify(sectionsConfig, null, 2));
 
-    const allExams = await db.select().from(exams);
-    console.log("Total Exams:", allExams.length);
-    console.log("Exam IDs:", allExams.map(e => e.id));
-
-    const allStudents = await db.select().from(students);
-    console.log("Total Students:", allStudents.length);
-
-    const allSubmissions = await db.select().from(submissions);
-    console.log("Total Submissions:", allSubmissions.length);
-    if (allSubmissions.length > 0) {
-        console.log("Submissions detail:", allSubmissions.map(s => ({
-            id: s.id,
-            examId: s.examId,
-            usn: s.usn,
-            score: s.score
-        })));
+            const pools: Record<string, number> = {};
+            for (const q of (exam.questions || [])) {
+                const s = q.section || "General";
+                pools[s] = (pools[s] || 0) + 1;
+            }
+            console.log(`Questions per section in DB:`, pools);
+            console.log("---------------------------------------------------");
+        }
+    } catch (e) {
+        console.error(e);
     }
-
-    process.exit(0);
 }
-
-check().catch(err => {
-    console.error(err);
-    process.exit(1);
-});
+main();
