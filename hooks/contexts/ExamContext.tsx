@@ -36,6 +36,7 @@ export interface Exam {
   proctoringVideoEnabled?: boolean | number;
   showResults?: boolean | number;
   strictSectionTiming?: boolean | number;
+  sectionalNavigation?: "free" | "forward-only";
   sebConfigId?: string | null;
   positiveMarks?: number;
   negativeMarks?: string;

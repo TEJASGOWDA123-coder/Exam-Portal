@@ -53,36 +53,28 @@ export default function LiveExamPage() {
   }, [exam]);
 
 
-  const shuffledQuestions = useMemo(() => {
-    if (!exam) return [];
+  const isSubmittingRef = useRef(false);
+  const startTime = useMemo(() => Date.now(), []);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenEnforcer, setShowFullscreenEnforcer] = useState(false);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+  const lastViolationTimeRef = useRef<number>(0);
+  const VIOLATION_COOLDOWN = 30000; // 30 seconds cooldown
 
-    // Group all questions by section (case-insensitive)
-    const pools: Record<string, typeof exam.questions> = {};
-    exam.questions.forEach(q => {
-      const s = (q.section || "General").toLowerCase();
-      if (!pools[s]) pools[s] = [];
-      pools[s].push(q);
-    });
-
-    let selected: typeof exam.questions = [];
-
-    if (exam.sectionsConfig && exam.sectionsConfig.length > 0) {
-      // Pick based on config
-      exam.sectionsConfig.forEach(config => {
-        const pool = pools[config.name.toLowerCase()] || [];
-        const count = Math.min(config.pickCount, pool.length);
-        const shuffledPool = shuffleArray(pool);
-        // Normalize section name to match config for subsequent logic
-        const subset = shuffledPool.slice(0, count).map(q => ({ ...q, section: config.name }));
-        selected = [...selected, ...subset];
-      });
-    } else {
-      // Use all questions
-      selected = shuffleArray(exam.questions);
-    }
-
-    return selected;
-  }, [exam]);
+  const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+  const [currentQ, setCurrentQ] = useState(0);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number | number[] | string>>({});
+  const [justifications, setJustifications] = useState<Record<string, string>>({});
+  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
+  const [visited, setVisited] = useState<Set<string>>(new Set());
+  const [violations, setViolations] = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const storageKey = student ? `exam_prog_${examId}_${student.usn}` : null;
 
   const sectionGroups = useMemo(() => {
     const groups: Record<string, { startIndex: number; count: number; questions: any[] }> = {};
@@ -98,26 +90,81 @@ export default function LiveExamPage() {
   }, [shuffledQuestions]);
 
   const orderedSectionNames = useMemo(() => Object.keys(sectionGroups), [sectionGroups]);
-
-  const [currentQ, setCurrentQ] = useState(0);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-
   const activeSection = orderedSectionNames[currentSectionIndex] || "General";
-  const [answers, setAnswers] = useState<Record<string, number | number[] | string>>({});
-  const [justifications, setJustifications] = useState<Record<string, string>>({});
-  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
-  const [visited, setVisited] = useState<Set<string>>(new Set());
-  const [violations, setViolations] = useState(0);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSubmittingRef = useRef(false);
-  const startTime = useMemo(() => Date.now(), []);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showFullscreenEnforcer, setShowFullscreenEnforcer] = useState(false);
-  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
-  const lastViolationTimeRef = useRef<number>(0);
-  const VIOLATION_COOLDOWN = 60000; // 1 minute cooldown
+
+  // Load / Initialize exam state
+  useEffect(() => {
+    if (!exam || !student || isDataLoaded) return;
+
+    const saved = storageKey ? localStorage.getItem(storageKey) : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Reconstruct shuffledQuestions from IDs
+        const restored = (parsed.shuffledQuestionIds || []).map((id: string) => 
+          exam.questions.find(q => q.id === id)
+        ).filter(Boolean);
+
+        if (restored.length > 0) {
+          setShuffledQuestions(restored);
+          setAnswers(parsed.answers || {});
+          setVisited(new Set(parsed.visited || []));
+          setMarkedForReview(new Set(parsed.markedForReview || []));
+          setViolations(parsed.violations || 0);
+          setCurrentQ(parsed.currentQ || 0);
+          setCurrentSectionIndex(parsed.currentSectionIndex || 0);
+          setPreCheck(false); 
+          setIsDataLoaded(true);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to restore session", e);
+        if (storageKey) localStorage.removeItem(storageKey);
+      }
+    }
+
+    // Default Initialization (Shuffle)
+    const pools: Record<string, typeof exam.questions> = {};
+    exam.questions.forEach(q => {
+      const s = (q.section || "General").toLowerCase();
+      if (!pools[s]) pools[s] = [];
+      pools[s].push(q);
+    });
+
+    let selected: typeof exam.questions = [];
+
+    if (exam.sectionsConfig && exam.sectionsConfig.length > 0) {
+      exam.sectionsConfig.forEach(config => {
+        const pool = pools[config.name.toLowerCase()] || [];
+        const count = Math.min(config.pickCount, pool.length);
+        const shuffledPool = shuffleArray(pool);
+        const subset = shuffledPool.slice(0, count).map(q => ({ ...q, section: config.name }));
+        selected = [...selected, ...subset];
+      });
+    } else {
+      selected = shuffleArray(exam.questions);
+    }
+
+    setShuffledQuestions(selected);
+    setIsDataLoaded(true);
+  }, [exam, student, storageKey, isDataLoaded]);
+
+  // Auto-Save Effect
+  useEffect(() => {
+    if (!isDataLoaded || !storageKey || submitted || !shuffledQuestions.length) return;
+
+    const sessionData = {
+      shuffledQuestionIds: shuffledQuestions.map(q => q.id),
+      answers,
+      visited: Array.from(visited),
+      markedForReview: Array.from(markedForReview),
+      violations,
+      currentQ,
+      currentSectionIndex,
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(sessionData));
+  }, [shuffledQuestions, answers, visited, markedForReview, violations, currentQ, currentSectionIndex, storageKey, isDataLoaded, submitted]);
 
   // Initial fullscreen check
   useEffect(() => {
@@ -147,12 +194,16 @@ export default function LiveExamPage() {
       if (isCurrentlyFullscreen) {
         setShowFullscreenEnforcer(false);
       }
-
-      if (!isCurrentlyFullscreen && !submitted && !preCheck && !isSubmittingRef.current && exam?.proctoringEnabled) {
+      
+      // Fullscreen enforcement is MANDATORY even if AI proctoring is disabled
+      if (!isCurrentlyFullscreen && !submitted && !preCheck && !isSubmittingRef.current) {
         setShowFullscreenEnforcer(true);
-
+        
         const now = Date.now();
-        if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
+        const isProctored = !!exam?.proctoringEnabled;
+        const cooldownActive = isProctored && (now - lastViolationTimeRef.current < VIOLATION_COOLDOWN);
+
+        if (!cooldownActive) {
           lastViolationTimeRef.current = now;
           setViolations((v) => {
             const next = v + 1;
@@ -176,6 +227,13 @@ export default function LiveExamPage() {
       events.forEach(event => document.removeEventListener(event, handleFullscreenChange));
     };
   }, [submitted, preCheck, exam?.proctoringEnabled]);
+
+  // Proactive fullscreen check for session resume
+  useEffect(() => {
+    if (!preCheck && !submitted && !isFullscreen && !isSubmittingRef.current) {
+      setShowFullscreenEnforcer(true);
+    }
+  }, [preCheck, submitted, isFullscreen]);
 
   const enterFullscreen = useCallback(() => {
     const el = document.documentElement as any;
@@ -229,7 +287,7 @@ export default function LiveExamPage() {
 
       let isCorrect = false;
       if (q.type === "msq") {
-        const correctIndices = q.correctAnswer.split(",").map(i => parseInt(i)).sort();
+        const correctIndices = q.correctAnswer.split(",").map((i: string) => parseInt(i)).sort();
         if (
           Array.isArray(ans) &&
           ans.length === correctIndices.length &&
@@ -303,6 +361,11 @@ export default function LiveExamPage() {
         questions: shuffledQuestions, // Pass full questions for detailed view
       }),
     );
+
+    // Clear persistent session
+    if (storageKey) {
+      localStorage.removeItem(storageKey);
+    }
 
     // Immediate redirect to avoid proctoring staying active
     router.replace(`/exam/${examId}/result`);
@@ -382,13 +445,31 @@ export default function LiveExamPage() {
   const navigateTo = useCallback((index: number) => {
     const targetQ = shuffledQuestions[index];
     const targetSection = targetQ?.section || "General";
+    
     if (targetSection !== activeSection) {
-      toast.warning("You cannot access questions outside the current section.");
-      return;
+      const targetSectionIndex = orderedSectionNames.indexOf(targetSection);
+      
+      if (exam?.strictSectionTiming) {
+        toast.warning("Sectional timing active: You cannot manually switch sections.");
+        return;
+      }
+      
+      if (exam?.sectionalNavigation === "forward-only") {
+        if (targetSectionIndex < currentSectionIndex) {
+          toast.warning("Forward-only navigation: You cannot move to a previous section.");
+          return;
+        }
+        // If they want to move forward, we allow it but it's "permanent"
+        setCurrentSectionIndex(targetSectionIndex);
+      } else {
+        // Free navigation
+        setCurrentSectionIndex(targetSectionIndex);
+      }
     }
+    
     setCurrentQ(index);
     setVisited(prev => new Set(prev).add(shuffledQuestions[index].id));
-  }, [shuffledQuestions, activeSection]);
+  }, [shuffledQuestions, activeSection, orderedSectionNames, currentSectionIndex, exam?.strictSectionTiming, exam?.sectionalNavigation]);
 
   const saveAndNext = useCallback(() => {
     const sectionEnd = sectionGroups[activeSection].startIndex + sectionGroups[activeSection].count - 1;
@@ -427,8 +508,8 @@ export default function LiveExamPage() {
 
   // Check for existing submission on mount
   useEffect(() => {
-    // Add first question to visited on mount
-    if (shuffledQuestions.length > 0) {
+    // Initial visited update only if not loaded from storage
+    if (shuffledQuestions.length > 0 && visited.size === 0) {
       setVisited(prev => new Set(prev).add(shuffledQuestions[0].id));
     }
 
@@ -457,12 +538,19 @@ export default function LiveExamPage() {
       // Tab switching counts as a violation for ALL exams if they are in live mode
       if (document.hidden && !submitted && !preCheck && !isSubmittingRef.current) {
         const now = Date.now();
-        if (now - lastViolationTimeRef.current > VIOLATION_COOLDOWN) {
+        const isProctored = !!exam?.proctoringEnabled;
+        const cooldownActive = isProctored && (now - lastViolationTimeRef.current < VIOLATION_COOLDOWN);
+
+        if (!cooldownActive) {
           lastViolationTimeRef.current = now;
           setViolations((v) => {
             const next = v + 1;
             toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
             return next;
+          });
+        } else {
+          toast.warning("Tab switch detected!", {
+            description: "Please stay on the exam tab."
           });
         }
       }
@@ -562,10 +650,16 @@ export default function LiveExamPage() {
                   </span>
                 )}
                 {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined) && (
-                  <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-muted-foreground px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-2">
-                    <span className="text-emerald-500 font-black">+{exam.positiveMarks ?? 1}</span>
-                    <span className="opacity-30">/</span>
-                    <span className="text-red-500 font-black">-{exam.negativeMarks ?? 0}</span>
+                  <span className="text-[10px] bg-white dark:bg-slate-900 shadow-sm border border-border text-muted-foreground px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-emerald-600 dark:text-emerald-400">+{exam.positiveMarks ?? 1}</span>
+                    </div>
+                    <div className="w-[1px] h-3 bg-border" />
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span className="text-red-600 dark:text-red-400">-{exam.negativeMarks ?? 0}</span>
+                    </div>
                   </span>
                 )}
               </div>
@@ -594,11 +688,29 @@ export default function LiveExamPage() {
             {Object.keys(sectionGroups).map((name) => {
               const { answered, total } = getSectionProgress(name);
               const isActive = activeSection === name;
+              const sectionIndex = Object.keys(sectionGroups).indexOf(name);
+              
+              // Navigation restrictions
+              let isDisabled = false;
+              if (exam?.strictSectionTiming) {
+                isDisabled = !isActive;
+              } else if (exam?.sectionalNavigation === "forward-only") {
+                isDisabled = sectionIndex < currentSectionIndex;
+              }
+
               return (
                 <button
                   key={name}
-                  disabled={name !== activeSection}
-                  className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : "text-muted-foreground opacity-40 cursor-not-allowed"}`}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (!isDisabled) {
+                      const nextIndex = sectionGroups[name].startIndex;
+                      setCurrentSectionIndex(sectionIndex);
+                      setCurrentQ(nextIndex);
+                      setVisited(prev => new Set(prev).add(shuffledQuestions[nextIndex].id));
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-4 py-1.5 rounded-xl transition-all whitespace-nowrap ${isActive ? "bg-primary text-white shadow-lg" : isDisabled ? "opacity-20 cursor-not-allowed" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   <div className="flex flex-col items-start translate-y-[1px]">
                     <span className="text-[7px] font-black uppercase tracking-widest opacity-60">Section</span>
@@ -637,7 +749,7 @@ export default function LiveExamPage() {
                 <button
                   key={i}
                   onClick={() => navigateTo(i)}
-                  className={`flex-shrink-0 w-8 h-8 rounded-lg text-xs font-black transition-all border flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-lg z-10 border-primary ring-2 ring-primary/20 bg-background !text-primary" : "hover:bg-muted"}`}
+                  className={`flex-shrink-0 w-7 h-7 rounded-lg text-[10px] font-black transition-all border-2 flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-lg z-10 border-primary ring-2 ring-primary/20" : "hover:border-primary/40 opacity-90"}`}
                 >
                   {i + 1}
                 </button>
@@ -711,7 +823,10 @@ export default function LiveExamPage() {
                 <Button
                   variant="outline"
                   onClick={() => setCurrentQ(c => c - 1)}
-                  disabled={currentQ === sectionGroups[activeSection].startIndex}
+                  disabled={
+                    currentQ === sectionGroups[activeSection].startIndex || 
+                    (exam?.sectionalNavigation === "forward-only" && currentQ === sectionGroups[activeSection].startIndex)
+                  }
                   className="rounded-xl px-6 font-bold border-2"
                 >
                   <ChevronLeft className="w-4 h-4 mr-2" /> Previous
@@ -794,7 +909,7 @@ export default function LiveExamPage() {
                   <button
                     key={i}
                     onClick={() => navigateTo(i)}
-                    className={`aspect-square rounded-xl text-xs font-black transition-all border-2 flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-xl z-10 border-primary ring-2 ring-primary/20" : "hover:scale-105"}`}
+                    className={`h-7 w-7 rounded-lg text-[10px] font-black transition-all border-2 flex items-center justify-center relative ${statusClass} ${isCurrent ? "scale-110 shadow-xl z-10 border-primary ring-2 ring-primary/20" : "hover:scale-110"}`}
                   >
                     {i + 1}
                   </button>

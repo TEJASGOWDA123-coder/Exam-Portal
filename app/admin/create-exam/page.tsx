@@ -49,6 +49,7 @@ export default function CreateExam() {
    const [proctoringVideo, setProctoringVideo] = useState(true);
    const [showResults, setShowResults] = useState(true);
    const [strictSectionTiming, setStrictSectionTiming] = useState(false);
+   const [sectionalNavigation, setSectionalNavigation] = useState<"free" | "forward-only">("free");
    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
    const [positiveMarks, setPositiveMarks] = useState("1");
    const [negativeMarks, setNegativeMarks] = useState("0");
@@ -155,6 +156,7 @@ export default function CreateExam() {
          proctoringVideoEnabled: proctoringVideo,
          showResults,
          strictSectionTiming,
+         sectionalNavigation,
          sebConfigId,
          positiveMarks: parseInt(positiveMarks) || 1,
          negativeMarks: negativeMarks || "0",
@@ -430,8 +432,53 @@ export default function CreateExam() {
                                  </div>
                                  <p className="text-xs text-muted-foreground">Allow students to see results immediately</p>
                               </div>
-                              <Switch checked={showResults} onCheckedChange={setShowResults} />
-                           </div>
+                               <Switch checked={showResults} onCheckedChange={setShowResults} />
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                               <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                     <Clock className="w-4 h-4 text-orange-500" />
+                                     <Label className="text-base font-bold">Strict Section Timings</Label>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
+                               </div>
+                               <Switch 
+                                 checked={strictSectionTiming} 
+                                 onCheckedChange={(checked) => {
+                                   setStrictSectionTiming(checked);
+                                   if (checked) setSectionalNavigation("forward-only");
+                                 }} 
+                               />
+                            </div>
+
+                            {!strictSectionTiming && (
+                              <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30 animate-in slide-in-from-top-2">
+                                 <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                       <ChevronRight className="w-4 h-4 text-blue-500" />
+                                       <Label className="text-base font-bold">Section Navigation</Label>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Control how students move between sections</p>
+                                 </div>
+                                 <div className="flex items-center bg-muted rounded-lg p-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSectionalNavigation("free")}
+                                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "free" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                    >
+                                      Free
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSectionalNavigation("forward-only")}
+                                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "forward-only" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                    >
+                                      Forward Only
+                                    </button>
+                                 </div>
+                              </div>
+                            )}
 
                            <div className="space-y-2 pt-2 border-t border-border mt-4">
                               <div className="flex items-center gap-2 mb-2">

@@ -44,8 +44,11 @@ export default function EditExam() {
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [proctoringEnabled, setProctoringEnabled] = useState(false);
+    const [proctoringAudio, setProctoringAudio] = useState(true);
+    const [proctoringVideo, setProctoringVideo] = useState(true);
     const [showResults, setShowResults] = useState(true);
     const [strictSectionTiming, setStrictSectionTiming] = useState(false);
+    const [sectionalNavigation, setSectionalNavigation] = useState<"free" | "forward-only">("free");
     const [sebConfigId, setSebConfigId] = useState<string | null>(null);
     const [positiveMarks, setPositiveMarks] = useState("1");
     const [negativeMarks, setNegativeMarks] = useState("0");
@@ -65,8 +68,11 @@ export default function EditExam() {
             setStartTime(exam.startTime);
             setEndTime(exam.endTime);
             setProctoringEnabled(!!exam.proctoringEnabled);
+            setProctoringAudio(exam.proctoringAudioEnabled !== undefined ? !!exam.proctoringAudioEnabled : true);
+            setProctoringVideo(exam.proctoringVideoEnabled !== undefined ? !!exam.proctoringVideoEnabled : true);
             setShowResults(exam.showResults !== undefined ? !!exam.showResults : true);
             setStrictSectionTiming(exam.strictSectionTiming !== undefined ? !!exam.strictSectionTiming : false);
+            setSectionalNavigation(exam.sectionalNavigation || "free");
             setSebConfigId(exam.sebConfigId || null);
             setPositiveMarks(exam.positiveMarks?.toString() || "1");
             setNegativeMarks(exam.negativeMarks || "0");
@@ -88,8 +94,11 @@ export default function EditExam() {
                         setStartTime(data.startTime);
                         setEndTime(data.endTime);
                         setProctoringEnabled(!!data.proctoringEnabled);
+                        setProctoringAudio(data.proctoringAudioEnabled !== undefined ? !!data.proctoringAudioEnabled : true);
+                        setProctoringVideo(data.proctoringVideoEnabled !== undefined ? !!data.proctoringVideoEnabled : true);
                         setShowResults(data.showResults !== undefined ? !!data.showResults : true);
                         setStrictSectionTiming(data.strictSectionTiming !== undefined ? !!data.strictSectionTiming : false);
+                        setSectionalNavigation(data.sectionalNavigation || "free");
                         setSebConfigId(data.sebConfigId || null);
                         setPositiveMarks(data.positiveMarks?.toString() || "1");
                         setNegativeMarks(data.negativeMarks || "0");
@@ -205,8 +214,11 @@ export default function EditExam() {
             startTime,
             endTime,
             proctoringEnabled,
+            proctoringAudioEnabled: proctoringAudio,
+            proctoringVideoEnabled: proctoringVideo,
             showResults,
             strictSectionTiming,
+            sectionalNavigation,
             sebConfigId,
             positiveMarks: positiveMarks !== "" ? parseInt(positiveMarks) : 1,
             negativeMarks: negativeMarks || "0",
@@ -458,6 +470,19 @@ export default function EditExam() {
                                         <Switch checked={proctoringEnabled} onCheckedChange={setProctoringEnabled} />
                                     </div>
 
+                                    {proctoringEnabled && (
+                                        <div className="grid grid-cols-2 gap-4 ml-6 pl-4 border-l-2 border-primary/20 animate-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/10">
+                                                <Label className="text-sm font-bold text-muted-foreground mr-4">Require Camera</Label>
+                                                <Switch checked={proctoringVideo} onCheckedChange={setProctoringVideo} />
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/10">
+                                                <Label className="text-sm font-bold text-muted-foreground mr-4">Require Microphone</Label>
+                                                <Switch checked={proctoringAudio} onCheckedChange={setProctoringAudio} />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
                                         <div className="space-y-0.5">
                                             <div className="flex items-center gap-2">
@@ -477,8 +502,42 @@ export default function EditExam() {
                                             </div>
                                             <p className="text-xs text-muted-foreground">Force students to wait for the timer to elapse before moving to the next section.</p>
                                         </div>
-                                        <Switch checked={strictSectionTiming} onCheckedChange={setStrictSectionTiming} />
+                                        <Switch 
+                                            checked={strictSectionTiming} 
+                                            onCheckedChange={(checked) => {
+                                                setStrictSectionTiming(checked);
+                                                if (checked) setSectionalNavigation("forward-only");
+                                            }} 
+                                        />
                                     </div>
+
+                                    {!strictSectionTiming && (
+                                        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30 animate-in slide-in-from-top-2">
+                                            <div className="space-y-0.5">
+                                                <div className="flex items-center gap-2">
+                                                    <ChevronRight className="w-4 h-4 text-blue-500" />
+                                                    <Label className="text-base font-bold">Section Navigation</Label>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">Control how students move between sections</p>
+                                            </div>
+                                            <div className="flex items-center bg-muted rounded-lg p-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSectionalNavigation("free")}
+                                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "free" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                                >
+                                                    Free
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSectionalNavigation("forward-only")}
+                                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "forward-only" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                                >
+                                                    Forward Only
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-2 pt-2 border-t border-border mt-4">
                                         <div className="flex items-center gap-2 mb-2">

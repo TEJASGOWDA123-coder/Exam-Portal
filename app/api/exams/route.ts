@@ -42,6 +42,7 @@ export async function GET() {
                     proctoringAudioEnabled: exam.proctoringAudioEnabled,
                     proctoringVideoEnabled: exam.proctoringVideoEnabled,
                     strictSectionTiming: exam.strictSectionTiming,
+                    sectionalNavigation: exam.sectionalNavigation,
                     sectionsConfig: parseJson(exam.sectionsConfig),
                     blueprint: parseJson(exam.blueprint),
                     positiveMarks: exam.positiveMarks,
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sectionalNavigation, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks } = data;
 
 
 
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
                 proctoringVideoEnabled: proctoringVideoEnabled !== undefined ? (proctoringVideoEnabled ? 1 : 0) : 1,
                 showResults: showResults !== undefined ? (showResults ? 1 : 0) : 1,
                 strictSectionTiming: strictSectionTiming !== undefined ? (strictSectionTiming ? 1 : 0) : 0,
+                sectionalNavigation: sectionalNavigation || "free",
                 sebConfigId: sebConfigId || null,
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
                 blueprint: blueprint ? JSON.stringify(blueprint) : null,
