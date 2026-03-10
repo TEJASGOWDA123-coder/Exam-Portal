@@ -19,42 +19,39 @@ import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { useExam } from "@/hooks/contexts/ExamContext";
 import { useSession } from "next-auth/react";
 
-const rules = [
-  {
-    icon: Timer,
-    text: "The exam timer will start immediately once you click Begin and cannot be paused or restarted.",
-  },
-  {
-    icon: Monitor,
-    text: "Fullscreen mode is mandatory throughout the exam. Exiting fullscreen will trigger an automatic warning.",
-  },
-  {
-    icon: ShieldCheck,
-    text: "Switching tabs, opening new windows, or minimizing the browser is strictly prohibited. All activities are monitored and recorded.",
-  },
-
-
-  {
-    icon: AlertTriangle,
-    text: "The exam will automatically submit when the time expires or if multiple rule violations are detected.",
-  },
-  {
-    icon: Globe,
-    text: "Ensure a stable internet connection before starting. The system is not responsible for connectivity issues.",
-  },
-
-  {
-    icon: Smartphone,
-    text: "Do not use mobile phones, smart devices, or external assistance during the exam.",
-  },
-];
-
 export default function Instructions() {
   const { examId } = useParams();
   const { exams, student } = useExam();
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const exam = exams.find((e) => e.id === examId);
+
+  const rules = [
+    {
+      icon: Timer,
+      text: "The exam timer will start immediately once you click Begin and cannot be paused or restarted.",
+    },
+    {
+      icon: Monitor,
+      text: "Fullscreen mode is mandatory throughout the exam. Exiting fullscreen will trigger an automatic warning.",
+    },
+    {
+      icon: ShieldCheck,
+      text: "Switching tabs, opening new windows, or minimizing the browser is strictly prohibited. All activities are monitored and recorded.",
+    },
+    {
+      icon: AlertTriangle,
+      text: `The exam will automatically submit when the time expires or if more than ${exam?.maxViolations || 3} rule violations are detected.`,
+    },
+    {
+      icon: Globe,
+      text: "Ensure a stable internet connection before starting. The system is not responsible for connectivity issues.",
+    },
+    {
+      icon: Smartphone,
+      text: "Do not use mobile phones, smart devices, or external assistance during the exam.",
+    },
+  ];
 
   useEffect(() => {
     if (!student) {
@@ -116,17 +113,33 @@ export default function Instructions() {
 
                 {exam.sectionsConfig && exam.sectionsConfig.length > 0 && (
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-2">
-                    {exam.sectionsConfig.map((sec, i) => (
-                      <div key={i} className="px-2.5 py-1 rounded-lg bg-card border border-primary/10 flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{sec.name}:</span>
-                        <span className="text-[10px] font-black text-primary uppercase">{sec.duration} Min</span>
+                    {exam.strictSectionTiming ? (
+                      <>
+                        {exam.sectionsConfig.map((sec, i) => (
+                          <div key={i} className="px-2.5 py-1 rounded-lg bg-card border border-primary/10 flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{sec.name}:</span>
+                            <span className="text-[10px] font-black text-primary uppercase">{sec.duration} Min</span>
+                          </div>
+                        ))}
+                        <div className="w-full mt-1">
+                          <p className="text-[9px] text-muted-foreground italic font-medium">
+                            * Strict sectional timing is enabled. Once a section's time ends, you will be moved to the next.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full">
+                        {exam.sectionalNavigation === "forward-only" ? (
+                          <p className="text-[9px] text-amber-600 dark:text-amber-400 italic font-bold uppercase tracking-wider">
+                            * Forward-Only Navigation: You can move to the next section when ready, but you cannot return to previous sections.
+                          </p>
+                        ) : (
+                          <p className="text-[9px] text-emerald-600 dark:text-emerald-400 italic font-bold uppercase tracking-wider">
+                            * Global Timing Active: You can navigate between all {exam.sectionsConfig.length} sections freely within the total {exam.duration} minutes.
+                          </p>
+                        )}
                       </div>
-                    ))}
-                    <div className="w-full mt-1">
-                      <p className="text-[9px] text-muted-foreground italic font-medium">
-                        * Strict sectional timing is enabled. Once a section's time ends, you will be moved to the next.
-                      </p>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -159,7 +172,7 @@ export default function Instructions() {
                 htmlFor="accept"
                 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider cursor-pointer select-none"
               >
-                I have read and agree to all rules
+                I have read and agree to all Instructions
               </label>
             </div>
 

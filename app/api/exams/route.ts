@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sectionalNavigation, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sectionalNavigation, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks, maxViolations } = data;
 
 
 
@@ -106,7 +106,8 @@ export async function POST(req: Request) {
                 sectionsConfig: data.sectionsConfig ? JSON.stringify(data.sectionsConfig) : null,
                 blueprint: blueprint ? JSON.stringify(blueprint) : null,
                 positiveMarks: positiveMarks !== undefined ? positiveMarks : 1,
-                negativeMarks: negativeMarks !== undefined ? negativeMarks : "0"
+                negativeMarks: negativeMarks !== undefined ? negativeMarks : "0",
+                maxViolations: maxViolations !== undefined ? maxViolations : 3
             };
 
             if (existingExam) {

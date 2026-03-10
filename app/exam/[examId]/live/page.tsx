@@ -126,21 +126,31 @@ export default function LiveExamPage() {
     // Default Initialization (Shuffle)
     const pools: Record<string, typeof exam.questions> = {};
     exam.questions.forEach(q => {
-      const s = (q.section || "General").toLowerCase();
+      const s = (q.section || "General").toLowerCase().trim();
       if (!pools[s]) pools[s] = [];
       pools[s].push(q);
     });
 
     let selected: typeof exam.questions = [];
+    const usedIds = new Set<string>();
 
     if (exam.sectionsConfig && exam.sectionsConfig.length > 0) {
+      // 1. Pick based on config
       exam.sectionsConfig.forEach(config => {
-        const pool = pools[config.name.toLowerCase()] || [];
+        const configName = config.name.toLowerCase().trim();
+        const pool = pools[configName] || [];
         const count = Math.min(config.pickCount, pool.length);
         const shuffledPool = shuffleArray(pool);
-        const subset = shuffledPool.slice(0, count).map(q => ({ ...q, section: config.name }));
-        selected = [...selected, ...subset];
+        const subset = shuffledPool.slice(0, count);
+        subset.forEach(q => usedIds.add(q.id));
+        selected = [...selected, ...subset.map(q => ({ ...q, section: config.name }))];
       });
+
+      // 2. Include all leftover questions (ensures total questions match admin)
+      const leftovers = exam.questions.filter(q => !usedIds.has(q.id));
+      if (leftovers.length > 0) {
+        selected = [...selected, ...shuffleArray(leftovers)];
+      }
     } else {
       selected = shuffleArray(exam.questions);
     }
@@ -207,7 +217,8 @@ export default function LiveExamPage() {
           lastViolationTimeRef.current = now;
           setViolations((v) => {
             const next = v + 1;
-            toast.error(`⚠️ Security breach: Fullscreen exited! Violation ${next}/3`, {
+            const maxV = exam?.maxViolations || 3;
+            toast.error(`⚠️ Security breach: Fullscreen exited! Violation ${next}/${maxV}`, {
               description: "Please return to fullscreen immediately to avoid disqualification.",
             });
             return next;
@@ -390,7 +401,8 @@ export default function LiveExamPage() {
       lastViolationTimeRef.current = now;
       setViolations((v) => {
         const next = v + 1;
-        toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/3`, {
+        const maxV = exam?.maxViolations || 3;
+        toast.error(`⚠️ AI Detection: ${reason}! Violation ${next}/${maxV}`, {
           description: "Please maintain proper exam conduct.",
         });
         return next;
@@ -501,10 +513,11 @@ export default function LiveExamPage() {
 
   // Handle violation limit
   useEffect(() => {
-    if (violations >= 3 && !submitted && !isSubmitting) {
+    const maxV = exam?.maxViolations || 3;
+    if (violations >= maxV && !submitted && !isSubmitting) {
       submitExam(false, violations);
     }
-  }, [violations, submitted, isSubmitting, submitExam]);
+  }, [violations, submitted, isSubmitting, submitExam, exam?.maxViolations]);
 
   // Check for existing submission on mount
   useEffect(() => {
@@ -545,7 +558,8 @@ export default function LiveExamPage() {
           lastViolationTimeRef.current = now;
           setViolations((v) => {
             const next = v + 1;
-            toast.error(`⚠️ Tab switch detected! Violation ${next}/3`);
+            const maxV = exam?.maxViolations || 3;
+            toast.error(`⚠️ Tab switch detected! Violation ${next}/${maxV}`);
             return next;
           });
         } else {
@@ -671,9 +685,13 @@ export default function LiveExamPage() {
               <TimerIcon className="w-4 h-4 text-primary" />
               {/* Reset timer per section using key */}
               <Timer
-                key={activeSection}
-                durationSeconds={(exam.sectionsConfig?.find(s => s.name === activeSection)?.duration || 5) * 60}
-                onTimeUp={handleSectionTimeUp}
+                key={exam.strictSectionTiming ? activeSection : exam.id}
+                durationSeconds={
+                  exam.strictSectionTiming 
+                    ? (exam.sectionsConfig?.find(s => s.name === activeSection)?.duration || 5) * 60
+                    : (exam.duration || 60) * 60
+                }
+                onTimeUp={exam.strictSectionTiming ? handleSectionTimeUp : () => submitExam(true)}
               />
             </div>
             <ModeToggle />
@@ -988,7 +1006,7 @@ export default function LiveExamPage() {
             </Button>
 
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
-              Violation {violations}/3 Recorded
+              Violation {violations}/{exam?.maxViolations || 3} Recorded
             </p>
           </div>
         </AlertDialogContent>

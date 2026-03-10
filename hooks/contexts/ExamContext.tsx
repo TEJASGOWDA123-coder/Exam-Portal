@@ -40,6 +40,7 @@ export interface Exam {
   sebConfigId?: string | null;
   positiveMarks?: number;
   negativeMarks?: string;
+  maxViolations?: number;
   sectionsConfig?: { name: string; pickCount: number; duration: number }[];
   questions: Question[];
 }

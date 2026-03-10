@@ -23,6 +23,7 @@ import {
    ArrowLeft,
    ChevronRight,
    Sparkles,
+   AlertCircle,
    Clock,
    ShieldCheck,
    BarChart2,
@@ -53,6 +54,7 @@ export default function CreateExam() {
    const [sebConfigId, setSebConfigId] = useState<string | null>(null);
    const [positiveMarks, setPositiveMarks] = useState("1");
    const [negativeMarks, setNegativeMarks] = useState("0");
+   const [maxViolations, setMaxViolations] = useState("3");
    const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
    const [availableSections, setAvailableSections] = useState<{ id: string, name: string }[]>([]);
    const [uploadingSeb, setUploadingSeb] = useState(false);
@@ -158,8 +160,10 @@ export default function CreateExam() {
          strictSectionTiming,
          sectionalNavigation,
          sebConfigId,
-         positiveMarks: parseInt(positiveMarks) || 1,
+         positiveMarks: positiveMarks !== "" ? parseInt(positiveMarks) : 1,
          negativeMarks: negativeMarks || "0",
+         maxViolations: parseInt(maxViolations),
+         generatedQuestions: null,
          sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
          questions: [],
       };
@@ -479,6 +483,27 @@ export default function CreateExam() {
                                  </div>
                               </div>
                             )}
+
+                           <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                              <div className="space-y-0.5">
+                                 <div className="flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                    <Label className="text-base font-bold">Violation Limit</Label>
+                                 </div>
+                                 <p className="text-xs text-muted-foreground">Max violations allowed before auto-submission</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                 <input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    value={maxViolations}
+                                    onChange={(e) => setMaxViolations(e.target.value)}
+                                    className="w-16 h-10 px-3 rounded-lg bg-background border border-border text-center font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                 />
+                                 <span className="text-xs font-bold text-muted-foreground">Alerts</span>
+                              </div>
+                           </div>
 
                            <div className="space-y-2 pt-2 border-t border-border mt-4">
                               <div className="flex items-center gap-2 mb-2">

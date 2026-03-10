@@ -28,7 +28,8 @@ import {
     BarChart2,
     FileEdit,
     AlignLeft,
-    ChevronRight
+    ChevronRight,
+    AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -52,6 +53,7 @@ export default function EditExam() {
     const [sebConfigId, setSebConfigId] = useState<string | null>(null);
     const [positiveMarks, setPositiveMarks] = useState("1");
     const [negativeMarks, setNegativeMarks] = useState("0");
+    const [maxViolations, setMaxViolations] = useState("3");
     const [configs, setConfigs] = useState<{ id: string, name: string }[]>([]);
     const [uploadingSeb, setUploadingSeb] = useState(false);
     const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
@@ -76,6 +78,7 @@ export default function EditExam() {
             setSebConfigId(exam.sebConfigId || null);
             setPositiveMarks(exam.positiveMarks?.toString() || "1");
             setNegativeMarks(exam.negativeMarks || "0");
+            setMaxViolations(exam.maxViolations?.toString() || "3");
             const mappedSections = (exam.sectionsConfig || []).map(s => ({
                 ...s,
                 duration: s.duration || Math.floor(exam.duration / (exam.sectionsConfig?.length || 1)) || 5
@@ -102,6 +105,7 @@ export default function EditExam() {
                         setSebConfigId(data.sebConfigId || null);
                         setPositiveMarks(data.positiveMarks?.toString() || "1");
                         setNegativeMarks(data.negativeMarks || "0");
+                        setMaxViolations(data.maxViolations?.toString() || "3");
                         const mappedSections = (data.sectionsConfig || []).map((s: any) => ({
                             ...s,
                             duration: s.duration || Math.floor(data.duration / (data.sectionsConfig?.length || 1)) || 5
@@ -222,6 +226,7 @@ export default function EditExam() {
             sebConfigId,
             positiveMarks: positiveMarks !== "" ? parseInt(positiveMarks) : 1,
             negativeMarks: negativeMarks || "0",
+            maxViolations: parseInt(maxViolations),
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
             status: exam?.status || "upcoming",
             questions: exam?.questions || [],
@@ -510,34 +515,55 @@ export default function EditExam() {
                                             }} 
                                         />
                                     </div>
+ 
+                                     {!strictSectionTiming && (
+                                         <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30 animate-in slide-in-from-top-2">
+                                             <div className="space-y-0.5">
+                                                 <div className="flex items-center gap-2">
+                                                     <ChevronRight className="w-4 h-4 text-blue-500" />
+                                                     <Label className="text-base font-bold">Section Navigation</Label>
+                                                 </div>
+                                                 <p className="text-xs text-muted-foreground">Control how students move between sections</p>
+                                             </div>
+                                             <div className="flex items-center bg-muted rounded-lg p-1">
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setSectionalNavigation("free")}
+                                                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "free" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                                 >
+                                                     Free
+                                                 </button>
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setSectionalNavigation("forward-only")}
+                                                     className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "forward-only" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                                 >
+                                                     Forward Only
+                                                 </button>
+                                             </div>
+                                         </div>
+                                     )}
 
-                                    {!strictSectionTiming && (
-                                        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30 animate-in slide-in-from-top-2">
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-2">
-                                                    <ChevronRight className="w-4 h-4 text-blue-500" />
-                                                    <Label className="text-base font-bold">Section Navigation</Label>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">Control how students move between sections</p>
+                                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <AlertCircle className="w-4 h-4 text-red-500" />
+                                                <Label className="text-base font-bold">Violation Limit</Label>
                                             </div>
-                                            <div className="flex items-center bg-muted rounded-lg p-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSectionalNavigation("free")}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "free" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
-                                                >
-                                                    Free
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSectionalNavigation("forward-only")}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${sectionalNavigation === "forward-only" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
-                                                >
-                                                    Forward Only
-                                                </button>
-                                            </div>
+                                            <p className="text-xs text-muted-foreground">Max violations allowed before auto-submission</p>
                                         </div>
-                                    )}
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="10"
+                                                value={maxViolations}
+                                                onChange={(e) => setMaxViolations(e.target.value)}
+                                                className="w-16 h-10 px-3 rounded-lg bg-background border border-border text-center font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            />
+                                            <span className="text-xs font-bold text-muted-foreground">Alerts</span>
+                                        </div>
+                                    </div>
 
                                     <div className="space-y-2 pt-2 border-t border-border mt-4">
                                         <div className="flex items-center gap-2 mb-2">

@@ -380,71 +380,68 @@ export default function ViewResults() {
                   <div className="blob w-[300px] h-[300px] bg-blue-500/10 -bottom-20 -right-20 animate-float [animation-delay:3s] opacity-50" />
                </div>
 
-               <div className="relative flex flex-col h-full max-h-[90vh] overflow-hidden">
-                  <div className="p-10 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
-                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-6">
-                           <div className="h-16 w-16 rounded-[1.25rem] bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 font-black text-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                <div className="relative flex flex-col h-full max-h-[90vh] overflow-hidden">
+                  <div className="p-8 border-b border-slate-200/50 dark:border-slate-800/50 bg-white/60 dark:bg-primary-foreground backdrop-blur-xl">
+                     <div className="flex flex-col md:flex-row shadow-sm border border-slate-200/50 dark:border-slate-800/50 rounded-3xl overflow-hidden">
+                        <div className="flex-1 p-6 flex items-center gap-5">
+                           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-xl border border-primary/20 shadow-inner">
                               {selectedSubmission?.studentName.charAt(0)}
                            </div>
-                           <div className="space-y-1">
-                              <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase">
+                           <div className="space-y-0.5">
+                              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
                                  {selectedSubmission?.studentName}
                               </h2>
-                              <div className="flex items-center gap-3">
-                                 <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                                    USN: {selectedSubmission?.usn}
+                              <div className="flex items-center gap-2">
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                    USN: <span className="text-foreground">{selectedSubmission?.usn}</span>
                                  </span>
-                                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                 <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500">
-                                    Assessment Report
+                                 <div className="h-1 w-1 rounded-full bg-slate-300" />
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                                    Evaluation Ledger
                                  </span>
                               </div>
                            </div>
                         </div>
-                        <div className="flex gap-4 items-stretch">
-                           <div className="flex flex-col justify-center bg-white/60 dark:bg-slate-900/60 px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur-sm">
-                              <div className="flex items-center gap-6">
-                                 <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                       +{currentExam?.positiveMarks ?? 1}
-                                       <span className="ml-1.5 text-[10px] opacity-60 font-bold uppercase tracking-widest">Correct</span>
-                                    </span>
+                        <div className="flex items-stretch bg-muted/30 dark:bg-slate-900/30 border-l border-slate-200/50 dark:border-slate-800/50">
+                           <div className="px-6 flex flex-col justify-center border-r border-slate-200/50 dark:border-slate-800/50">
+                              <div className="flex items-center gap-4">
+                                 <div className="text-center">
+                                    <p className="text-xs font-black text-emerald-500">+{currentExam?.positiveMarks ?? 1}</p>
+                                    <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-tighter">Correct</p>
                                  </div>
-                                 <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700" />
-                                 <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-red-500" />
-                                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                       -{currentExam?.negativeMarks ?? 0}
-                                       <span className="ml-1.5 text-[10px] opacity-60 font-bold uppercase tracking-widest">Incorrect</span>
-                                    </span>
+                                 <div className="text-center">
+                                    <p className="text-xs font-black text-red-500">-{currentExam?.negativeMarks ?? 0}</p>
+                                    <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-tighter">Wrong</p>
                                  </div>
                               </div>
                            </div>
-                           <div className="min-w-[120px] text-center bg-emerald-500 px-6 py-4 rounded-3xl shadow-[0_0_25px_rgba(16,185,129,0.2)] flex flex-col items-center justify-center border border-emerald-400/20">
-                              <p className="text-3xl font-black text-white leading-none mb-1 tracking-tighter">
+                           <div className="px-8 bg-primary flex flex-col items-center justify-center min-w-[100px]">
+                              <p className="text-3xl font-black text-primary-foreground leading-none mb-0.5 tracking-tighter">
                                  {selectedSubmission?.score}
                               </p>
-                              <span className="text-[10px] uppercase font-black text-white/80 tracking-widest">Total Points</span>
+                              <span className="text-[8px] uppercase font-black text-primary-foreground/70 tracking-widest">Total</span>
                            </div>
                         </div>
                      </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar relative z-10">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Email</p>
-                           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedSubmission?.email}</p>
+                  <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar relative z-10">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-2xl bg-white/40 dark:bg-primary-foreground border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Email Address</p>
+                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{selectedSubmission?.email}</p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Batch / Class</p>
-                           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedSubmission?.year} • {selectedSubmission?.class} • Section {selectedSubmission?.section}</p>
+                        <div className="p-3.5 rounded-2xl bg-white/40 dark:bg-primary-foreground border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Department & Year</p>
+                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">{selectedSubmission?.class} • Year {selectedSubmission?.year}</p>
+                        </div>
+                        <div className="p-3.5 rounded-2xl bg-white/40 dark:bg-primary-foreground border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Session Logic</p>
+                           <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">Section {selectedSubmission?.section} • {selectedSubmission?.violations} Alerts</p>
                         </div>
                      </div>
 
-                     <div className="space-y-6">
+                     <div className="space-y-6 bg-glass dark:bg-primary-foreground">
                         {currentExam?.questions.map((q, idx) => {
                            const justs = typeof selectedSubmission?.justifications === 'string' ? JSON.parse(selectedSubmission.justifications) : selectedSubmission?.justifications || {};
                            const studentJust = justs[q.id];
@@ -504,101 +501,109 @@ export default function ViewResults() {
                            const isCorrect = checkCorrectness();
                            const isAnswered = studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== "";
 
-                           return (
-                              <div key={q.id} className="group p-6 rounded-2xl bg-white/5 dark:bg-slate-900/40 border border-slate-800/60 transition-all hover:bg-white/10 dark:hover:bg-slate-900/60">
-                                 <div className="flex items-start gap-4">
-                                    <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-slate-800/80 flex items-center justify-center text-sm font-bold text-slate-300 border border-slate-700 mt-0.5">{idx + 1}</span>
-                                    <div className="flex-1 space-y-5">
-                                       <div>
-                                          <div className="flex justify-between items-start mb-2">
-                                             <h4 className="font-bold text-white text-lg leading-relaxed whitespace-pre-wrap">{q.question}</h4>
-                                             <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
-                                                {isAnswered ? (
-                                                   isCorrect ? (
-                                                      <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm flex items-center gap-1.5">
-                                                         <CheckCircle2 className="w-4 h-4" /> Correct <span className="opacity-70 text-[10px]">+{currentExam?.positiveMarks || 1}</span>
-                                                      </span>
-                                                   ) : (
-                                                      <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20 shadow-sm flex items-center gap-1.5">
-                                                         <XCircle className="w-4 h-4" /> Incorrect <span className="opacity-70 text-[10px]">-{currentExam?.negativeMarks || 0}</span>
-                                                      </span>
-                                                   )
-                                                ) : (
-                                                   <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 shadow-sm flex items-center gap-1.5">
-                                                      Skipped <span className="opacity-70 text-[10px]">0</span>
-                                                   </span>
-                                                )}
-                                             </div>
-                                          </div>
-                                          <div className="flex gap-2">
-                                             <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-800/50 text-slate-400 border border-slate-700/50">
-                                                {q.section}
-                                             </span>
-                                             <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-800/50 text-slate-400 border border-slate-700/50 uppercase tracking-widest">
-                                                {q.type}
-                                             </span>
-                                          </div>
-                                       </div>
-
-                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                          <div className={`rounded-xl border p-5 flex flex-col transition-colors ${isAnswered ? (isCorrect ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20') : 'bg-slate-800/40 border-slate-700/50'}`}>
-                                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                                Student Selection
-                                             </div>
-                                             <div className="text-sm flex-1 text-slate-200 font-medium">
-                                                {renderAnswer(studentAnswer)}
-                                             </div>
-                                          </div>
-                                          <div className="bg-primary/5 rounded-xl border border-primary/20 p-5 flex flex-col">
-                                             <div className="text-[10px] font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-wider">
-                                                Correct Answer(s)
-                                             </div>
-                                             <div className="text-sm flex-1 text-slate-200 font-medium">
-                                                {renderAnswer(q.correctAnswer)}
-                                             </div>
-                                          </div>
-                                       </div>
-
-                                       {q.requiresJustification ? (
-                                          <div className="bg-muted/30 rounded-xl border border-border p-4">
-                                             <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-2">
-                                                   <SparklesIcon className="w-4 h-4 text-amber-500" />
-                                                   <span className="text-xs font-bold text-foreground">Justification</span>
-                                                </div>
-                                                <Button
-                                                   size="sm"
-                                                   disabled={isValidating || !studentJust}
-                                                   onClick={() => validateAI(q.id, q.question, q.correctAnswer, studentJust)}
-                                                   className="h-8 text-xs font-bold bg-primary text-primary-foreground"
-                                                >
-                                                   {isValidating ? <RefreshCw className="w-3 h-3 animate-spin mr-2" /> : <div className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-2" /> Validate</div>}
-                                                </Button>
-                                             </div>
-                                             <p className="text-sm text-muted-foreground p-3 bg-background rounded-lg border border-border italic mb-4">
-                                                "{studentJust || "No justification provided."}"
-                                             </p>
-
-                                             {feedback && (
-                                                <div className={`p-4 rounded-lg border flex items-start gap-3 animation-fade-in ${feedback.isValid ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                                                   {feedback.isValid ? <Check className="w-4 h-4 text-emerald-600 mt-0.5" /> : <XIcon className="w-4 h-4 text-red-600 mt-0.5" />}
-                                                   <div>
-                                                      <div className="flex items-center gap-2 mb-1">
-                                                         <span className="text-xs font-bold text-foreground">AI Analysis</span>
-                                                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-background border border-border font-mono">{feedback.score}/10</span>
-                                                      </div>
-                                                      <p className="text-xs text-muted-foreground hover:text-foreground transition-colors">{feedback.feedback}</p>
-                                                   </div>
-                                                </div>
-                                             )}
-                                          </div>
-                                       ) : (
-                                          <p className="text-[10px] text-muted-foreground italic font-medium opacity-60">No justification required for this question.</p>
-                                       )}
-                                    </div>
-                                 </div>
-                              </div>
-                           );
+                            return (
+                               <div key={q.id} className="group p-5 rounded-[1.5rem] bg-white/5 dark:bg-slate-900/20 border border-slate-200/50 dark:border-slate-800/50 transition-all hover:bg-white/10 dark:hover:bg-slate-900/40 backdrop-blur-sm shadow-sm">
+                                  <div className="flex items-start gap-5">
+                                     <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-black text-primary border border-primary/20 mt-1">{idx + 1}</span>
+                                     <div className="flex-1 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                           <div className="space-y-1.5">
+                                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-snug whitespace-pre-wrap">{q.question}</h4>
+                                              <div className="flex gap-2">
+                                                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/50 text-[9px] font-black uppercase tracking-tighter text-muted-foreground border border-border/50">
+                                                    {q.section}
+                                                 </span>
+                                                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/50 text-[9px] font-black uppercase tracking-widest text-muted-foreground border border-border/50">
+                                                    {q.type}
+                                                 </span>
+                                              </div>
+                                           </div>
+                                           <div className="flex flex-col items-end gap-2 ml-4 flex-shrink-0">
+                                              {isAnswered ? (
+                                                 isCorrect ? (
+                                                    <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20 shadow-sm flex items-center gap-1.5 ring-1 ring-emerald-500/10">
+                                                       <CheckCircle2 className="w-3.5 h-3.5" /> Correct <span className="opacity-70">+{currentExam?.positiveMarks || 1}</span>
+                                                    </span>
+                                                 ) : (
+                                                    <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/20 shadow-sm flex items-center gap-1.5 ring-1 ring-red-500/10">
+                                                       <XCircle className="w-3.5 h-3.5" /> Incorrect <span className="opacity-70">-{currentExam?.negativeMarks || 0}</span>
+                                                    </span>
+                                                 )
+                                              ) : (
+                                                 <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider bg-slate-200/50 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700 shadow-sm flex items-center gap-1.5">
+                                                    Skipped <span className="opacity-70">0</span>
+                                                 </span>
+                                              )}
+                                           </div>
+                                        </div>
+ 
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                           <div className={`rounded-xl border px-4 py-3.5 flex flex-col transition-all ${isAnswered ? (isCorrect ? 'bg-emerald-500/[0.03] border-emerald-500/20' : 'bg-red-500/[0.03] border-red-500/20') : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800'}`}>
+                                              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2 opactiy-80">
+                                                 Student Choice
+                                              </div>
+                                              <div className="text-xs flex-1 text-slate-800 dark:text-slate-200 font-bold leading-relaxed">
+                                                 {renderAnswer(studentAnswer)}
+                                              </div>
+                                           </div>
+                                           <div className="bg-primary/[0.03] rounded-xl border border-primary/10 px-4 py-3.5 flex flex-col">
+                                              <div className="text-[9px] font-black text-primary mb-2 flex items-center gap-2 uppercase tracking-widest opacity-80">
+                                                 Correct Solution
+                                              </div>
+                                              <div className="text-xs flex-1 text-slate-800 dark:text-slate-200 font-bold leading-relaxed">
+                                                 {renderAnswer(q.correctAnswer)}
+                                              </div>
+                                           </div>
+                                        </div>
+ 
+                                        {q.requiresJustification ? (
+                                           <div className="bg-muted/20 dark:bg-slate-900/40 rounded-xl border border-border/50 p-4">
+                                              <div className="flex items-center justify-between gap-4 mb-3">
+                                                 <div className="flex items-center gap-2">
+                                                    <div className="h-6 w-6 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                                                       <SparklesIcon className="w-3 h-3 text-orange-500" />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Student Rationale</span>
+                                                 </div>
+                                                 <Button
+                                                    size="sm"
+                                                    disabled={isValidating || !studentJust}
+                                                    onClick={() => validateAI(q.id, q.question, q.correctAnswer, studentJust)}
+                                                    className="h-7 text-[10px] font-black bg-primary text-primary-foreground hover:scale-105 transition-transform"
+                                                 >
+                                                    {isValidating ? <RefreshCw className="w-2.5 h-2.5 animate-spin mr-1.5" /> : <div className="flex items-center leading-none"><CheckCircle2 className="w-2.5 h-2.5 mr-1.5" /> AI Validate</div>}
+                                                 </Button>
+                                              </div>
+                                              <p className="text-xs text-slate-600 dark:text-slate-400 p-3 bg-white/50 dark:bg-slate-950/40 rounded-lg border border-border/40 italic font-medium leading-relaxed">
+                                                 "{studentJust || "No justification provided."}"
+                                              </p>
+ 
+                                              {feedback && (
+                                                 <div className={`mt-3 p-3 rounded-lg border flex items-start gap-3 animation-fade-in ${feedback.isValid ? 'bg-emerald-500/[0.05] border-emerald-500/20' : 'bg-red-500/[0.05] border-red-500/20'}`}>
+                                                    <div className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center ${feedback.isValid ? 'bg-emerald-500/20 text-emerald-600' : 'bg-red-500/20 text-red-600'}`}>
+                                                       {feedback.isValid ? <Check className="w-3 h-3" /> : <XIcon className="w-3 h-3" />}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                       <div className="flex items-center justify-between mb-0.5">
+                                                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">AI Evaluation</span>
+                                                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${feedback.isValid ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}>{feedback.score}/10</span>
+                                                       </div>
+                                                       <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed italic">{feedback.feedback}</p>
+                                                    </div>
+                                                 </div>
+                                              )}
+                                           </div>
+                                        ) : (
+                                           <div className="flex items-center gap-2 opacity-40">
+                                              <div className="h-[1px] flex-1 bg-border" />
+                                              <p className="text-[8px] text-muted-foreground uppercase font-black tracking-[0.2em]">Quick Selection • No rationale</p>
+                                              <div className="h-[1px] flex-1 bg-border" />
+                                           </div>
+                                        )}
+                                     </div>
+                                  </div>
+                               </div>
+                            );
                         })}
                      </div>
                   </div>

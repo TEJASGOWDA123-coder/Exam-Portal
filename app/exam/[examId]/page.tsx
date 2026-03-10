@@ -216,7 +216,7 @@ export default function ExamEntry() {
                 <Input
                   id="class"
                   value={className}
-                  onChange={(e) => setClassName(e.target.value)}
+                  onChange={(e) => setClassName(e.target.value.toUpperCase())}
                   placeholder="e.g. CSE"
                   className="mt-1.5"
                   disabled={!!isEntryDisabled}
@@ -226,9 +226,10 @@ export default function ExamEntry() {
                 <Label htmlFor="year">Year</Label>
                 <Input
                   id="year"
+                  type="number"
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
-                  placeholder="e.g. 3rd"
+                  placeholder="e.g. 3"
                   className="mt-1.5"
                   disabled={!!isEntryDisabled}
                 />
@@ -238,7 +239,7 @@ export default function ExamEntry() {
                 <Input
                   id="section"
                   value={section}
-                  onChange={(e) => setSection(e.target.value)}
+                  onChange={(e) => setSection(e.target.value.toUpperCase())}
                   placeholder="e.g. A"
                   className="mt-1.5"
                   disabled={!!isEntryDisabled}

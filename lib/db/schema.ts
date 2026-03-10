@@ -61,6 +61,7 @@ export const exams = sqliteTable("exams", {
   blueprint: text("blueprint"), // JSON string for DSIE: { sectionId: string, count: number, marks: number }[]
   positiveMarks: integer("positive_marks").notNull().default(1),
   negativeMarks: text("negative_marks").notNull().default("0"), // Using text to allow decimals like "0.25"
+  maxViolations: integer("max_violations").notNull().default(3),
   generatedQuestions: text("generated_questions"), // JSON string for specific student variants
   sebConfigId: text("seb_config_id"), // Reference to seb_configs.id
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
