@@ -41,6 +41,8 @@ export interface Exam {
   positiveMarks?: number;
   negativeMarks?: string;
   maxViolations?: number;
+  blueprint?: string | null;
+  generatedQuestions?: string | null;
   sectionsConfig?: { name: string; pickCount: number; duration: number }[];
   questions: Question[];
 }
