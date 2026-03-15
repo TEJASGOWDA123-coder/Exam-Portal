@@ -496,7 +496,6 @@ export default function CreateExam() {
                                  <input
                                     type="number"
                                     min="1"
-                                    max="10"
                                     value={maxViolations}
                                     onChange={(e) => setMaxViolations(e.target.value)}
                                     className="w-16 h-10 px-3 rounded-lg bg-background border border-border text-center font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
