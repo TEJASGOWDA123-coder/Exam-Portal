@@ -1,0 +1,4 @@
+app/exam/[examId]/live/page.tsx(1424,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(1597,48): error TS7006: Parameter 'q' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(1609,35): error TS7006: Parameter 's' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(2222,65): error TS7006: Parameter 's' implicitly has an 'any' type.

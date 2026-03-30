@@ -1,4 +1,4 @@
-import { Question } from "@/hooks/contexts/ExamContext";
+import { Question } from "@/store/slices/examSlice";
 import { Label } from "@/components/ui/label";
 import { Send } from "lucide-react";
 

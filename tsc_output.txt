@@ -1,0 +1,21 @@
+app/exam/[examId]/live/page.tsx(1424,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(1597,48): error TS7006: Parameter 'q' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(1609,35): error TS7006: Parameter 's' implicitly has an 'any' type.
+app/exam/[examId]/live/page.tsx(2222,65): error TS7006: Parameter 's' implicitly has an 'any' type.
+store/slices/examSlice.ts(196,3): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(typePrefix: string, payloadCreator: AsyncThunkPayloadCreator<boolean, Partial<Submission>, AsyncThunkConfig>, options?: AsyncThunkOptions<...> | undefined): AsyncThunk<...>', gave the following error.
+    Argument of type '(result: Partial<Submission>, { dispatch }: { dispatch: AppDispatch; }) => Promise<boolean>' is not assignable to parameter of type 'AsyncThunkPayloadCreator<boolean, Partial<Submission>, AsyncThunkConfig>'.
+      Types of parameters '__1' and 'thunkAPI' are incompatible.
+        Type 'GetThunkAPI<AsyncThunkConfig>' is not assignable to type '{ dispatch: ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction> & Dispatch<...>; }'.
+          Types of property 'dispatch' are incompatible.
+            Type 'ThunkDispatch<unknown, unknown, UnknownAction>' is not assignable to type 'ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction> & Dispatch<...>'.
+              Type 'ThunkDispatch<unknown, unknown, UnknownAction>' is not assignable to type 'ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction>'.
+                Type 'unknown' is not assignable to type '{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }'.
+  Overload 2 of 2, '(typePrefix: string, payloadCreator: AsyncThunkPayloadCreator<boolean, Partial<Submission>, { state?: unknown; dispatch?: ThunkDispatch<unknown, unknown, UnknownAction> | undefined; ... 5 more ...; rejectedMeta?: unknown; }>, options?: AsyncThunkOptions<...> | undefined): AsyncThunk<...>', gave the following error.
+    Argument of type '(result: Partial<Submission>, { dispatch }: { dispatch: AppDispatch; }) => Promise<boolean>' is not assignable to parameter of type 'AsyncThunkPayloadCreator<boolean, Partial<Submission>, { state?: unknown; dispatch?: ThunkDispatch<unknown, unknown, UnknownAction> | undefined; extra?: unknown; rejectValue?: unknown; serializedErrorType?: unknown; pendingMeta?: unknown; fulfilledMeta?: unknown; rejectedMeta?: unknown; }>'.
+      Types of parameters '__1' and 'thunkAPI' are incompatible.
+        Type 'GetThunkAPI<{ state?: unknown; dispatch?: ThunkDispatch<unknown, unknown, UnknownAction> | undefined; extra?: unknown; rejectValue?: unknown; serializedErrorType?: unknown; pendingMeta?: unknown; fulfilledMeta?: unknown; rejectedMeta?: unknown; }>' is not assignable to type '{ dispatch: ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction> & Dispatch<...>; }'.
+          Types of property 'dispatch' are incompatible.
+            Type 'ThunkDispatch<unknown, unknown, UnknownAction>' is not assignable to type 'ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction> & Dispatch<...>'.
+              Type 'ThunkDispatch<unknown, unknown, UnknownAction>' is not assignable to type 'ThunkDispatch<{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }, undefined, UnknownAction>'.
+                Type 'unknown' is not assignable to type '{ exam: ExamState; academic: AcademicState; admins: AdminState; seb: SebState; sections: SectionState; }'.

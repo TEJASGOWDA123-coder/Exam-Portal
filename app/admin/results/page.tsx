@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useExam } from "@/hooks/contexts/ExamContext";
+import { useAppSelector } from "@/store/hooks";
 import {
     FilePlus,
     Link as LinkIcon,
@@ -17,9 +17,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const ExamPage = () => {
-    const { exams } = useExam();
-
-
+    const exams = useAppSelector((state) => state.exam.exams);
 
     const getStatusColor = (status: string) => {
         switch (status) {

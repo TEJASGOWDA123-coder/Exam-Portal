@@ -1,0 +1,159 @@
+app/exam/[examId]/live/page.tsx(1307,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+app/exam/[examId]/live/page.tsx(1309,24): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1310,28): error TS2307: Cannot find module '@/components/pageComponents/ModeToggle' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1335,8): error TS2307: Cannot find module '@/components/ui/alert-dialog' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1336,48): error TS2307: Cannot find module '@/store/hooks' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1337,27): error TS2307: Cannot find module '@/store' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1345,8): error TS2307: Cannot find module '@/store/slices/examSlice' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1346,58): error TS2307: Cannot find module '@/store/slices/examSlice' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1347,26): error TS2307: Cannot find module '@/components/QuestionCard' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1348,19): error TS2307: Cannot find module '@/components/Timer' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1349,23): error TS2307: Cannot find module '@/components/proctoring/AIProctor' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1350,26): error TS2307: Cannot find module '@/components/exam/PreExamCheck' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1351,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+app/exam/[examId]/live/page.tsx(1388,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2086,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2087,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2088,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2089,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2097,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2103,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2109,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2110,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2111,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2112,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2120,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2121,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2122,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2123,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2132,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2162,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2164,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2165,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2167,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2168,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2169,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2171,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2172,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2175,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2176,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2180,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2181,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2190,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2193,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2194,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2197,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2198,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2203,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2205,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2206,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2207,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2211,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2213,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2214,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2230,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2236,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2237,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2239,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2249,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2271,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2286,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2289,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2291,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2292,17): error TS2322: Type '{ key: any; index: any; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }' is not assignable to type '{ index: number; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }'.
+  Property 'key' does not exist on type '{ index: number; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }'.
+app/exam/[examId]/live/page.tsx(2306,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2308,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2310,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2311,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2312,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2315,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2325,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2326,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2353,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2354,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2355,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2366,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2369,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2375,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2380,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2381,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2396,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2399,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2405,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2406,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2410,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2412,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2421,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2424,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2425,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2436,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2437,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2440,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2462,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2466,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2469,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2470,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2473,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2483,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2484,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2487,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2489,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2490,19): error TS2322: Type '{ key: number; index: number; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }' is not assignable to type '{ index: number; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }'.
+  Property 'key' does not exist on type '{ index: number; isCurrent: boolean; isAnswered: boolean; isMarked: boolean; isVisited: boolean; onClick: () => void; }'.
+app/exam/[examId]/live/page.tsx(2503,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2504,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2505,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2510,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2516,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2524,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2525,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2526,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2527,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2530,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2532,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2533,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2539,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2540,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2543,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2549,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2550,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2562,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2563,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2564,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2565,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2566,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2570,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2571,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2572,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2574,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2575,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2578,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2582,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2583,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+app/exam/[examId]/live/page.tsx(2587,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+node_modules/next/dist/build/templates/app-page.d.ts(3,25): error TS2307: Cannot find module 'VAR_MODULE_GLOBAL_ERROR' or its corresponding type declarations.
+node_modules/next/dist/build/webpack-config.d.ts(10,104): error TS2694: Namespace '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/next/dist/compiled/webpack/webpack".webpack' has no exported member 'RuleSetUseItem'.
+node_modules/next/dist/build/webpack/loaders/next-app-loader/index.d.ts(1,13): error TS2613: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/next/dist/compiled/webpack/webpack"' has no default export. Did you mean to use 'import { webpack } from "C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/next/dist/compiled/webpack/webpack"' instead?
+node_modules/next/dist/client/components/error-boundary.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/client/components/http-access-fallback/error-boundary.d.ts(11,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/client/components/layout-router.d.ts(2,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/client/with-router.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/lib/metadata/metadata.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/server/app-render/entry-base.d.ts(1,114): error TS2307: Cannot find module 'react-server-dom-webpack/server' or its corresponding type declarations.
+node_modules/next/dist/server/app-render/entry-base.d.ts(2,27): error TS2307: Cannot find module 'react-server-dom-webpack/static' or its corresponding type declarations.
+node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(39,16): error TS2304: Cannot find name 'HeadersIterator'.
+node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(40,13): error TS2304: Cannot find name 'HeadersIterator'.
+node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(41,15): error TS2304: Cannot find name 'HeadersIterator'.
+node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts(42,26): error TS2304: Cannot find name 'HeadersIterator'.
+node_modules/next/dist/shared/lib/app-router-context.shared-runtime.d.ts(4,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/app-router-types.d.ts(7,13): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/image-config-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/loadable-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/loadable.shared-runtime.d.ts(21,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/router-context.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/server-inserted-html.shared-runtime.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+node_modules/next/dist/shared/lib/utils.d.ts(10,13): error TS1192: Module '"fs"' has no default export.
+node_modules/sonner/dist/index.d.ts(1,8): error TS1259: Module '"C:/Users/Tanmay/OneDrive/Desktop/CDC/Exam-Portal/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag

@@ -97,7 +97,7 @@
   --ring: 154 76% 45%;
 
   /* Effects */
-  --gradient-emerald: linear-gradient(180deg, #0F2E1C 0%, #083424 100%);
+  --gradient-emerald: linear-gradient(180deg, #0f2e1c 0%, #083424 100%);
   --glow-emerald: 0 0 25px rgba(34, 197, 94, 0.4);
 }
 
@@ -146,7 +146,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   }
 
   h1,
@@ -156,7 +156,7 @@
   h5,
   h6 {
     @apply font-black tracking-tight;
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -297,3 +297,44 @@
    GOOGLE FONTS
 ----------------------------------- */
 /* @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap"); */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* -----------------------------------
+   CROSS-BROWSER NORMALIZATION
+----------------------------------- */
+html {
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Float animation for hero elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

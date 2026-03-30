@@ -12,11 +12,9 @@ import {
   BadgeCheck,
   AlertCircle
 } from "lucide-react";
-import { useExam } from "@/hooks/contexts/ExamContext";
-
+import Link from "next/link";
 export default function PublicStartPage() {
   const { examId } = useParams();
-  const { exams } = useExam();
   const [loading, setLoading] = useState(true);
   const [exam, setExam] = useState<any>(null);
 
@@ -111,10 +109,10 @@ export default function PublicStartPage() {
               asChild
               className="h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg shadow-lg transition-all active:scale-[0.98] flex items-center justify-center"
             >
-              <a href={`/exam/${examId}/live`} className="w-full h-full flex items-center justify-center gap-4">
+              <Link href={`/exam/${examId}/live`} className="w-full h-full flex items-center justify-center gap-4">
                 Initiate Assessment Session
                 <Lock className="h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           </div>
         </div>

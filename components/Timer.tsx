@@ -1,20 +1,31 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+// @ts-ignore
 import { Clock } from "lucide-react";
 
 interface TimerProps {
-  durationSeconds: number;
+  endTimestamp: number; // Date.now() style timestamp
   onTimeUp: () => void;
   className?: string;
 }
 
-export default function Timer({ durationSeconds, onTimeUp, className = "" }: TimerProps) {
-  const [remaining, setRemaining] = useState(durationSeconds);
+export default function Timer({ endTimestamp, onTimeUp, className = "" }: TimerProps) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, Math.floor((endTimestamp - Date.now()) / 1000)));
 
   useEffect(() => {
-    if (remaining <= 0) { onTimeUp(); return; }
-    const interval = setInterval(() => setRemaining((r) => r - 1), 1000);
+    if (remaining <= 0) {
+      onTimeUp();
+      return;
+    }
+    const interval = setInterval(() => {
+      const nextRemaining = Math.max(0, Math.floor((endTimestamp - Date.now()) / 1000));
+      setRemaining(nextRemaining);
+      if (nextRemaining <= 0) {
+        clearInterval(interval);
+        onTimeUp();
+      }
+    }, 1000);
     return () => clearInterval(interval);
-  }, [remaining, onTimeUp]);
+  }, [endTimestamp, onTimeUp]);
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;

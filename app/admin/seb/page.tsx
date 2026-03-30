@@ -19,6 +19,8 @@ import {
     AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { fetchSebConfigsThunk, uploadSebConfigThunk, deleteSebConfigThunk } from "@/store/slices/sebSlice";
 
 interface SebConfig {
     id: string;
@@ -29,60 +31,26 @@ interface SebConfig {
 }
 
 export default function SebAdminPage() {
-    const [configs, setConfigs] = useState<SebConfig[]>([]);
-    const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [search, setSearch] = useState("");
-
-    const fetchConfigs = async () => {
-        try {
-            const resp = await fetch("/api/admin/seb");
-            if (resp.ok) {
-                const data = await resp.json();
-                setConfigs(data);
-            }
-        } catch (err) {
-            console.error("Failed to fetch SEB configs:", err);
-            toast.error("Failed to load configurations");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { configs, loading } = useAppSelector((state) => state.seb);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
-        fetchConfigs();
-    }, []);
+        dispatch(fetchSebConfigsThunk());
+    }, [dispatch]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        if (!file.name.endsWith(".seb")) {
-            toast.error("Please upload a valid .seb file");
-            return;
-        }
-
+        if (!file.name.endsWith(".seb")) { toast.error("Please upload a valid .seb file"); return; }
         setUploading(true);
         try {
             const text = await file.text();
-            const resp = await fetch("/api/admin/seb", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: file.name.replace(".seb", ""),
-                    configData: text,
-                }),
-            });
-
-            if (resp.ok) {
-                toast.success("SEB configuration uploaded successfully");
-                fetchConfigs();
-            } else {
-                const error = await resp.json();
-                throw new Error(error.error || "Upload failed");
-            }
+            await dispatch(uploadSebConfigThunk({ name: file.name.replace(".seb", ""), configData: text })).unwrap();
+            toast.success("SEB configuration uploaded successfully");
         } catch (err: any) {
-            toast.error(err.message || "Failed to upload file");
+            toast.error(err || "Failed to upload file");
         } finally {
             setUploading(false);
             e.target.value = "";
@@ -91,20 +59,11 @@ export default function SebAdminPage() {
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
-
         try {
-            const resp = await fetch(`/api/admin/seb?id=${id}`, {
-                method: "DELETE",
-            });
-
-            if (resp.ok) {
-                toast.success("Configuration deleted");
-                setConfigs(prev => prev.filter(c => c.id !== id));
-            } else {
-                toast.error("Failed to delete configuration");
-            }
-        } catch (err) {
-            toast.error("An error occurred");
+            await dispatch(deleteSebConfigThunk(id)).unwrap();
+            toast.success("Configuration deleted");
+        } catch (err: any) {
+            toast.error(err || "Failed to delete configuration");
         }
     };
 

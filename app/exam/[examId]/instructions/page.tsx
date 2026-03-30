@@ -16,12 +16,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
-import { useExam } from "@/hooks/contexts/ExamContext";
+import { useAppSelector } from "@/store/hooks";
 import { useSession } from "next-auth/react";
 
 export default function Instructions() {
   const { examId } = useParams();
-  const { exams, student } = useExam();
+  const exams = useAppSelector((state) => state.exam.exams);
+  const student = useAppSelector((state) => state.exam.student);
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const exam = exams.find((e) => e.id === examId);
@@ -53,11 +54,13 @@ export default function Instructions() {
     },
   ];
 
+  const loading = useAppSelector((state) => state.exam.loading);
+
   useEffect(() => {
-    if (!student) {
+    if (!loading && !student) {
       router.push(`/exam/${examId}`);
     }
-  }, [student, router, examId]);
+  }, [student, loading, router, examId]);
 
   if (!student || !exam) {
     return (

@@ -1,0 +1,1 @@
+DROP INDEX `dept_section_unique`;

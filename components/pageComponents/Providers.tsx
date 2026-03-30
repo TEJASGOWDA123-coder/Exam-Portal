@@ -7,14 +7,14 @@ import { ReactNode } from "react";
 
 import { ThemeProvider } from "../theme-provider";
 import { Toaster } from "sonner";
-import { ExamProvider } from "@/hooks/contexts/ExamContext";
+import { ReduxProvider } from "./ReduxProvider";
 import { SessionProvider } from "next-auth/react";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <ExamProvider>{children}</ExamProvider>
+        <ReduxProvider>{children}</ReduxProvider>
         <Toaster position="top-right" />
       </ThemeProvider>
     </SessionProvider>

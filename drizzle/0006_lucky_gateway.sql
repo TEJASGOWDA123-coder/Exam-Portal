@@ -1,0 +1,1 @@
+ALTER TABLE `academic_sections` ADD `order` integer NOT NULL;

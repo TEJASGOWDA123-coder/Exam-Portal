@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Exam, useExam } from "@/hooks/contexts/ExamContext";
+import { Exam } from "@/store/slices/examSlice";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { updateExamThunk } from "@/store/slices/examSlice";
 import { toast } from "sonner";
 import {
     Select,
@@ -36,7 +38,8 @@ import { Card } from "@/components/ui/card";
 
 export default function EditExam() {
     const { examId } = useParams();
-    const { exams, updateExam } = useExam();
+    const exams = useAppSelector((state) => state.exam.exams);
+    const dispatch = useAppDispatch();
     const router = useRouter();
 
     const [title, setTitle] = useState("");
@@ -233,11 +236,9 @@ export default function EditExam() {
         };
 
         try {
-            const success = await updateExam(updatedExam);
-            if (success) {
-                toast.success("Exam updated successfully!");
-                router.push("/admin/dashboard");
-            }
+            await dispatch(updateExamThunk(updatedExam)).unwrap();
+            toast.success("Exam updated successfully!");
+            router.push("/admin/dashboard");
         } catch (error: any) {
             toast.error(error.message || "Failed to update exam");
         }

@@ -1,0 +1,1 @@
+ALTER TABLE `submissions` ADD `violation_events` text;

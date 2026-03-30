@@ -27,7 +27,18 @@ export async function GET(req: Request) {
         }
 
         return NextResponse.json({ found: true, result });
-    } catch (error) {
+    } catch (error: any) {
+        const isNetworkError =
+            error.code === 'ENOTFOUND' ||
+            error.cause?.code === 'ENOTFOUND' ||
+            error.message?.includes('ENOTFOUND') ||
+            error.cause?.message?.includes('ENOTFOUND');
+
+        if (isNetworkError) {
+            // If DB is unreachable, assume not submitted yet so student can continue
+            console.warn("my-result: DB unreachable, returning found: false");
+            return NextResponse.json({ found: false, networkError: true });
+        }
         console.error("Failed to fetch my result:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }

@@ -25,12 +25,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { fetchAdminsThunk, addAdminThunk, deleteAdminThunk } from "@/store/slices/adminSlice";
 
 export default function ManageAdmins() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [admins, setAdmins] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { admins, loading } = useAppSelector((state) => state.admins);
+    const dispatch = useAppDispatch();
     const [adding, setAdding] = useState(false);
 
     // Form state
@@ -41,20 +43,6 @@ export default function ManageAdmins() {
 
     const isSuperAdmin = (session?.user as any)?.role === "superadmin";
 
-    const fetchAdmins = async () => {
-        try {
-            const resp = await fetch("/api/users");
-            if (resp.ok) {
-                const data = await resp.json();
-                setAdmins(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch admins:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/admin");
@@ -63,64 +51,33 @@ export default function ManageAdmins() {
                 toast.error("Unauthorized access");
                 router.push("/admin/dashboard");
             } else {
-                fetchAdmins();
+                dispatch(fetchAdminsThunk());
             }
         }
-    }, [status, isSuperAdmin, router]);
+    }, [status, isSuperAdmin, router, dispatch]);
 
     const handleAddAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !password) {
-            toast.error("All fields are required");
-            return;
-        }
-
+        if (!name || !email || !password) { toast.error("All fields are required"); return; }
         setAdding(true);
         try {
-            const resp = await fetch("/api/users", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, password, role }),
-            });
-
-            if (resp.ok) {
-                toast.success("Admin added successfully");
-                setName("");
-                setEmail("");
-                setPassword("");
-                fetchAdmins();
-            } else {
-                const err = await resp.json();
-                toast.error(err.error || "Failed to add admin");
-            }
-        } catch (error) {
-            toast.error("An error occurred");
-        } finally {
-            setAdding(false);
-        }
+            await dispatch(addAdminThunk({ name, email, password, role })).unwrap();
+            toast.success("Admin added successfully");
+            setName(""); setEmail(""); setPassword("");
+            dispatch(fetchAdminsThunk());
+        } catch (error: any) {
+            toast.error(error || "Failed to add admin");
+        } finally { setAdding(false); }
     };
 
     const handleDeleteAdmin = async (id: string, adminName: string) => {
-        if (id === session?.user?.id) {
-            toast.error("You cannot delete yourself");
-            return;
-        }
-
+        if (id === session?.user?.id) { toast.error("You cannot delete yourself"); return; }
         if (!confirm(`Are you sure you want to delete admin "${adminName}"?`)) return;
-
         try {
-            const resp = await fetch(`/api/users?id=${id}`, {
-                method: "DELETE",
-            });
-
-            if (resp.ok) {
-                toast.success("Admin deleted successfully");
-                fetchAdmins();
-            } else {
-                toast.error("Failed to delete admin");
-            }
-        } catch (error) {
-            toast.error("An error occurred");
+            await dispatch(deleteAdminThunk(id)).unwrap();
+            toast.success("Admin deleted successfully");
+        } catch (error: any) {
+            toast.error(error || "Failed to delete admin");
         }
     };
 

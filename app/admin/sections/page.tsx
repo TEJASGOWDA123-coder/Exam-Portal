@@ -21,23 +21,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-
-interface Section {
-  id: string;
-  name: string;
-  description: string;
-  identityPrompt: string;
-  transformationPrompt: string;
-  validationRules: string;
-  isActive: boolean;
-}
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { fetchSectionsThunk, saveSectionThunk, deleteSectionThunk, SectionTemplate } from "@/store/slices/sectionsSlice";
 
 export default function SectionManagement() {
-  const [sections, setSections] = useState<Section[]>([]);
+  const { sections, loading } = useAppSelector((state) => state.sections);
+  const dispatch = useAppDispatch();
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [autofilling, setAutofilling] = useState(false);
-  const [formData, setFormData] = useState<Partial<Section>>({
+  const [formData, setFormData] = useState<Partial<SectionTemplate>>({
     name: "",
     description: "",
     identityPrompt: "",
@@ -45,12 +38,12 @@ export default function SectionManagement() {
     validationRules: "{}",
   });
 
-  const handleAutofill = async () => {
-    if (!formData.name) {
-      toast.error("Enter a section name first");
-      return;
-    }
+  useEffect(() => {
+    dispatch(fetchSectionsThunk());
+  }, [dispatch]);
 
+  const handleAutofill = async () => {
+    if (!formData.name) { toast.error("Enter a section name first"); return; }
     setAutofilling(true);
     const toastId = toast.loading("AI is crafting the persona...");
     try {
@@ -61,91 +54,36 @@ export default function SectionManagement() {
       });
       const data = await resp.json();
       if (resp.ok) {
-        setFormData({
-          ...formData,
-          description: data.description,
-          identityPrompt: data.identityPrompt,
-          transformationPrompt: data.transformationPrompt,
-          validationRules: JSON.stringify(data.validationRules, null, 2),
-        });
+        setFormData({ ...formData, description: data.description, identityPrompt: data.identityPrompt, transformationPrompt: data.transformationPrompt, validationRules: JSON.stringify(data.validationRules, null, 2) });
         toast.success("Identity crafted! Review and Save.", { id: toastId });
-      } else {
-        throw new Error(data.error || "Failed to autofill");
-      }
+      } else { throw new Error(data.error || "Failed to autofill"); }
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
-    } finally {
-      setAutofilling(false);
-    }
+    } finally { setAutofilling(false); }
   };
-
-  const fetchSections = async () => {
-    try {
-      const resp = await fetch("/api/sections");
-      const data = await resp.json();
-      const cleaned = data.map((s: any) => {
-        try {
-          if (!s.validationRules) return s;
-          let parsed = JSON.parse(s.validationRules);
-          // If it's still a string after one parse, parse again (double stringification fix)
-          if (typeof parsed === "string") parsed = JSON.parse(parsed);
-          return { ...s, validationRules: JSON.stringify(parsed, null, 2) };
-        } catch (e) {
-          return s;
-        }
-      });
-      setSections(cleaned);
-    } catch (err) {
-      toast.error("Failed to load sections");
-    }
-  };
-
-  useEffect(() => {
-    fetchSections();
-  }, []);
 
   const handleSave = async () => {
-    if (!formData.name || !formData.identityPrompt) {
-      toast.error("Name and Identity Prompt are required");
-      return;
-    }
-
+    if (!formData.name || !formData.identityPrompt) { toast.error("Name and Identity Prompt are required"); return; }
     const toastId = toast.loading(editingId ? "Updating..." : "Creating...");
     try {
-      const method = editingId ? "PATCH" : "POST";
-      const body = editingId ? { ...formData, id: editingId } : formData;
-
-      const resp = await fetch("/api/sections", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (resp.ok) {
-        toast.success(editingId ? "Section updated" : "Section created", { id: toastId });
-        setEditingId(null);
-        setFormData({ name: "", description: "", identityPrompt: "", transformationPrompt: "", validationRules: "{}" });
-        fetchSections();
-      } else {
-        throw new Error("Failed to save");
-      }
-    } catch (err) {
-      toast.error("Error saving section", { id: toastId });
+      await dispatch(saveSectionThunk({ data: formData, editingId })).unwrap();
+      toast.success(editingId ? "Section updated" : "Section created", { id: toastId });
+      setEditingId(null);
+      setFormData({ name: "", description: "", identityPrompt: "", transformationPrompt: "", validationRules: "{}" });
+      dispatch(fetchSectionsThunk());
+    } catch (err: any) {
+      toast.error(err || "Error saving section", { id: toastId });
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure? This will remove the section template.")) return;
-
     const toastId = toast.loading("Deleting...");
     try {
-      const resp = await fetch(`/api/sections?id=${id}`, { method: "DELETE" });
-      if (resp.ok) {
-        toast.success("Section removed", { id: toastId });
-        fetchSections();
-      }
-    } catch (err) {
-      toast.error("Delete failed", { id: toastId });
+      await dispatch(deleteSectionThunk(id)).unwrap();
+      toast.success("Section removed", { id: toastId });
+    } catch (err: any) {
+      toast.error(err || "Delete failed", { id: toastId });
     }
   };
 

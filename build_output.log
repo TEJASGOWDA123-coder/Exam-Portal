@@ -1,0 +1,65 @@
+
+> msqexam@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 13.7s
+  Running TypeScript ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/24) ...
+  Generating static pages using 15 workers (6/24) 
+  Generating static pages using 15 workers (12/24) 
+  Generating static pages using 15 workers (18/24) 
+Γ£ô Generating static pages using 15 workers (24/24) in 696.5ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /admin
+Γö£ Γùï /admin/academic
+Γö£ ╞Æ /admin/add-questions/[examId]
+Γö£ Γùï /admin/create-exam
+Γö£ Γùï /admin/dashboard
+Γö£ ╞Æ /admin/edit-exam/[examId]
+Γö£ Γùï /admin/exam
+Γö£ Γùï /admin/manage-admins
+Γö£ Γùï /admin/results
+Γö£ ╞Æ /admin/results/[examId]
+Γö£ Γùï /admin/seb
+Γö£ Γùï /admin/sections
+Γö£ ╞Æ /api/academic
+Γö£ ╞Æ /api/admin/register
+Γö£ ╞Æ /api/admin/seb
+Γö£ ╞Æ /api/ai/extract-questions
+Γö£ ╞Æ /api/ai/generate-questions
+Γö£ ╞Æ /api/ai/validate-justification
+Γö£ ╞Æ /api/auth/[...nextauth]
+Γö£ ╞Æ /api/exams
+Γö£ ╞Æ /api/exams/[examId]
+Γö£ ╞Æ /api/parse-pdf
+Γö£ ╞Æ /api/results
+Γö£ ╞Æ /api/results/[id]
+Γö£ ╞Æ /api/results/my-result
+Γö£ ╞Æ /api/seb-test/configs
+Γö£ ╞Æ /api/seb/config/[examId]
+Γö£ ╞Æ /api/sections
+Γö£ ╞Æ /api/sections/autofill
+Γö£ ╞Æ /api/students
+Γö£ ╞Æ /api/students/entry
+Γö£ ╞Æ /api/users
+Γö£ ╞Æ /exam/[examId]
+Γö£ ╞Æ /exam/[examId]/instructions
+Γö£ ╞Æ /exam/[examId]/live
+Γö£ ╞Æ /exam/[examId]/result
+Γö£ ╞Æ /exam/[examId]/start
+Γö£ Γùï /seb-test
+Γöö ╞Æ /start/exam/[examId]
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
