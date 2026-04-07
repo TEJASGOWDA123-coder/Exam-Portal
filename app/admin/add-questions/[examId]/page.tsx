@@ -32,7 +32,9 @@ import {
   FilePlus,
   HelpCircle,
   Hash,
-  Settings
+  Settings,
+  Eye,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { Question, useExam } from "@/hooks/contexts/ExamContext";
@@ -176,6 +178,7 @@ export default function AddQuestions() {
   const [localTotalMarks, setLocalTotalMarks] = useState<string>("100");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [requiresJustification, setRequiresJustification] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -688,6 +691,15 @@ export default function AddQuestions() {
                 {questions.map((q, i) => (
                   <div key={q.id} className="group p-5 bg-card border border-border rounded-2xl shadow-sm hover:shadow-md transition-all relative">
                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className={cn("h-8 w-8 rounded-lg", expandedId === q.id && "bg-primary text-primary-foreground")} 
+                        onClick={() => setExpandedId(expandedId === q.id ? null : q.id)}
+                        title="View Options"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg" onClick={() => editQuestion(q.id)}>
                         <SquarePen className="w-4 h-4 text-primary" />
                       </Button>
@@ -712,6 +724,52 @@ export default function AddQuestions() {
                         </div>
                         <p className="font-bold text-foreground leading-relaxed pr-8">{q.question}</p>
                         {q.questionImage && <img src={q.questionImage} alt="Q" className="h-24 rounded-lg border border-border object-contain bg-slate-50" />}
+                        
+                        {/* Expandable Options View */}
+                        {expandedId === q.id && q.type !== "text" && q.options && (
+                          <div className="mt-4 pt-4 border-t border-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {q.options.map((opt, optIdx) => {
+                                const isCorrect = q.correctAnswer.split(",").includes(String(optIdx));
+                                return (
+                                  <div 
+                                    key={optIdx} 
+                                    className={cn(
+                                      "flex items-center gap-2 p-2 rounded-lg border text-xs font-medium transition-colors",
+                                      isCorrect 
+                                        ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400" 
+                                        : "bg-muted/30 border-border text-muted-foreground"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0",
+                                      isCorrect ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                                    )}>
+                                      {indexToLetter[optIdx]}
+                                    </span>
+                                    <span className="truncate">{opt.text}</span>
+                                    {isCorrect && <Check className="w-3 h-3 ml-auto" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {q.solution && (
+                              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl">
+                                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">Explanation</p>
+                                <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80 leading-relaxed font-medium">{q.solution}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {expandedId === q.id && q.type === "text" && (
+                          <div className="mt-4 pt-4 border-t border-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-xl">
+                              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-1">Correct Answer</p>
+                              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{q.correctAnswer}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

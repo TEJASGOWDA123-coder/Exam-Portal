@@ -7,8 +7,16 @@ import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useExam } from "@/hooks/contexts/ExamContext";
+import { AcademicDepartment, AcademicYear, AcademicSection } from "@/lib/db/schema";
 
 import { signIn } from "next-auth/react";
 
@@ -26,6 +34,37 @@ export default function ExamEntry() {
   const [section, setSection] = useState("");
   const [isInSeb, setIsInSeb] = useState(true);
   const [timeStatus, setTimeStatus] = useState<"upcoming" | "active" | "completed">("active");
+
+  const [availableDepts, setAvailableDepts] = useState<AcademicDepartment[]>([]);
+  const [availableYears, setAvailableYears] = useState<AcademicYear[]>([]);
+  const [availableSections, setAvailableSections] = useState<AcademicSection[]>([]);
+  const [isLoadingAcademic, setIsLoadingAcademic] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    async function fetchAcademicData() {
+      try {
+        const [dRes, yRes, sRes] = await Promise.all([
+          fetch("/api/academic/departments"),
+          fetch("/api/academic/years"),
+          fetch("/api/academic/sections"),
+        ]);
+        if (dRes.ok) setAvailableDepts(await dRes.json());
+        if (yRes.ok) setAvailableYears(await yRes.json());
+        if (sRes.ok) setAvailableSections(await sRes.json());
+      } catch (err) {
+        console.error("Failed to fetch academic data", err);
+      } finally {
+        setIsLoadingAcademic(false);
+      }
+    }
+    fetchAcademicData();
+  }, []);
 
   useEffect(() => {
     if (exam) {
@@ -130,10 +169,16 @@ export default function ExamEntry() {
               <p className="text-sm text-muted-foreground mb-6">
                  This exam hasn't started yet. The test link will become valid automatically at the scheduled time.
               </p>
-              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-6">
+              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-4">
                  <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">Scheduled Start</p>
-                 <p className="font-medium text-foreground">
-                    {exam.startTime ? new Date(exam.startTime).toLocaleString() : "TBD"}
+                 <p className="font-bold text-foreground">
+                    {exam.startTime ? new Date(exam.startTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' }) : "TBD"}
+                 </p>
+              </div>
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-6">
+                 <p className="text-xs uppercase tracking-wider font-bold text-primary mb-1">Your Local Time</p>
+                 <p className="font-bold text-primary">
+                    {currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' })}
                  </p>
               </div>
               <Button onClick={() => window.location.reload()} className="w-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20">
@@ -153,10 +198,19 @@ export default function ExamEntry() {
               <p className="text-sm text-muted-foreground mb-6">
                  This exam has already ended and the test link is no longer valid. If you believe this is an error or need a reschedule, please contact your administrator.
               </p>
-              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-2">
+              <div className="bg-muted/50 p-4 rounded-xl border border-border mb-4">
                  <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">Concluded At</p>
-                 <p className="font-medium text-foreground">
-                    {exam.endTime ? new Date(exam.endTime).toLocaleString() : "TBD"}
+                 <p className="font-bold text-foreground underline decoration-primary/30 underline-offset-4">
+                    {exam.endTime ? new Date(exam.endTime).toLocaleString(undefined, {
+                       dateStyle: 'full',
+                       timeStyle: 'medium'
+                    }) : "TBD"}
+                 </p>
+              </div>
+              <div className="bg-slate-500/5 p-4 rounded-xl border border-slate-500/10 mb-2">
+                 <p className="text-xs uppercase tracking-wider font-bold text-slate-500 mb-1">Your Local Time</p>
+                 <p className="font-bold text-slate-500">
+                    {currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' })}
                  </p>
               </div>
            </div>
@@ -213,37 +267,78 @@ export default function ExamEntry() {
               </div>
               <div>
                 <Label htmlFor="class">Department</Label>
-                <Input
-                  id="class"
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value.toUpperCase())}
-                  placeholder="e.g. CSE"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
+                <Select 
+                  disabled={!!isEntryDisabled || isLoadingAcademic} 
+                  value={availableDepts.find(d => d.code === className)?.id || ""} 
+                  onValueChange={(id) => {
+                    const dept = availableDepts.find(d => d.id === id);
+                    setClassName(dept?.code || "");
+                    setYear("");
+                    setSection("");
+                  }}
+                >
+                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                    <SelectValue placeholder="Select Dept" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {availableDepts.map((d) => (
+                      <SelectItem key={d.id} value={d.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                        {d.name} ({d.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div>
                 <Label htmlFor="year">Year</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  placeholder="e.g. 3"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
+                <Select 
+                  disabled={!!isEntryDisabled || isLoadingAcademic || !className} 
+                  value={availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id || ""} 
+                  onValueChange={(id) => {
+                    const y = availableYears.find(i => i.id === id);
+                    setYear(y?.name || "");
+                    setSection("");
+                  }}
+                >
+                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                    <SelectValue placeholder={className ? "Select Year" : "Pick Dept first"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {availableYears
+                      .filter(y => y.departmentId === availableDepts.find(d => d.code === className)?.id)
+                      .map((y) => (
+                        <SelectItem key={y.id} value={y.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                          {y.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div>
                 <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value.toUpperCase())}
-                  placeholder="e.g. A"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
+                <Select 
+                  disabled={!!isEntryDisabled || isLoadingAcademic || !year} 
+                  value={availableSections.find(s => s.name === section && s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)?.id || ""} 
+                  onValueChange={(id) => {
+                    const s = availableSections.find(i => i.id === id);
+                    setSection(s?.name || "");
+                  }}
+                >
+                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                    <SelectValue placeholder={year ? "Select Section" : "Pick Year first"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {availableSections
+                      .filter(s => s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button type="submit" className="w-full font-semibold h-11 mt-4" disabled={!!isEntryDisabled}>

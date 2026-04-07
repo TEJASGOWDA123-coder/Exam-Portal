@@ -40,6 +40,7 @@ export default function LiveExamPage() {
 
   const [preCheck, setPreCheck] = useState(true);
   const [isSeb, setIsSeb] = useState(true);
+  const [actualStartTime, setActualStartTime] = useState<Date | null>(null);
 
   // SEB Detection
   useEffect(() => {
@@ -157,7 +158,26 @@ export default function LiveExamPage() {
 
     setShuffledQuestions(selected);
     setIsDataLoaded(true);
-  }, [exam, student, storageKey, isDataLoaded]);
+
+    // Sync session (actual start time) with backend
+    const syncSession = async () => {
+      if (!student || !examId) return;
+      try {
+        const resp = await fetch(`/api/exams/${examId}/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usn: student.usn }),
+        });
+        if (resp.ok) {
+          const { startTime } = await resp.json();
+          setActualStartTime(new Date(startTime));
+        }
+      } catch (err) {
+        console.error("Failed to sync session start time", err);
+      }
+    };
+    syncSession();
+  }, [exam, student, examId, isDataLoaded]);
 
   // Auto-Save Effect
   useEffect(() => {
@@ -683,16 +703,42 @@ export default function LiveExamPage() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3 bg-muted px-4 py-2 rounded-2xl border border-border">
               <TimerIcon className="w-4 h-4 text-primary" />
-              {/* Reset timer per section using key */}
-              <Timer
-                key={exam.strictSectionTiming ? activeSection : exam.id}
-                durationSeconds={
-                  exam.strictSectionTiming 
-                    ? (exam.sectionsConfig?.find(s => s.name === activeSection)?.duration || 5) * 60
-                    : (exam.duration || 60) * 60
-                }
-                onTimeUp={exam.strictSectionTiming ? handleSectionTimeUp : () => submitExam(true)}
-              />
+              {/* Reset timer per section or when session loads */}
+              {(!exam.strictSectionTiming && !actualStartTime) ? (
+                <span className="text-sm font-bold animate-pulse">Syncing...</span>
+              ) : (
+                <Timer
+                  key={exam.strictSectionTiming ? `${activeSection}_${actualStartTime?.getTime()}` : `${exam.id}_${actualStartTime?.getTime()}`}
+                  durationSeconds={(() => {
+                    const now = new Date();
+                    const endTime = new Date(exam.endTime);
+                    const mode = exam.timerMode || "strict";
+                    const totalDuration = (exam.duration || 60) * 60;
+                    
+                    if (exam.strictSectionTiming) {
+                      // Sectional timing logic (remains relatively similar but respects overall end time)
+                      const sectionDuration = (exam.sectionsConfig?.find(s => s.name === activeSection)?.duration || 5) * 60;
+                      const timeToEnd = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
+                      return Math.min(sectionDuration, timeToEnd);
+                    }
+
+                    if (!actualStartTime) return totalDuration;
+
+                    const elapsedSinceStart = Math.floor((now.getTime() - actualStartTime.getTime()) / 1000);
+                    const timeWindowRemaining = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
+
+                    if (mode === "strict") {
+                      // JOIN LATE = LOSE TIME. Current time subtracted from absolute EndTime.
+                      return timeWindowRemaining;
+                    } else {
+                      // FLEXIBLE WINDOW. Full duration from START, but capped by absolute EndTime.
+                      const studentRemaining = Math.max(0, totalDuration - elapsedSinceStart);
+                      return Math.min(studentRemaining, timeWindowRemaining);
+                    }
+                  })()}
+                  onTimeUp={exam.strictSectionTiming ? handleSectionTimeUp : () => submitExam(true)}
+                />
+              )}
             </div>
             <ModeToggle />
           </div>

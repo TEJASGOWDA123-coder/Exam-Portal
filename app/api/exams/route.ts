@@ -43,6 +43,7 @@ export async function GET() {
                     proctoringVideoEnabled: exam.proctoringVideoEnabled,
                     strictSectionTiming: exam.strictSectionTiming,
                     sectionalNavigation: exam.sectionalNavigation,
+                    timerMode: exam.timerMode,
                     sectionsConfig: parseJson(exam.sectionsConfig),
                     blueprint: parseJson(exam.blueprint),
                     positiveMarks: exam.positiveMarks,
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
 
     try {
         const data = await req.json();
-        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sectionalNavigation, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks, maxViolations } = data;
+        const { id, title, duration, totalMarks, startTime, endTime, status, proctoringEnabled, proctoringAudioEnabled, proctoringVideoEnabled, showResults, strictSectionTiming, sectionalNavigation, sebConfigId, questions: examQuestions, blueprint, positiveMarks, negativeMarks, maxViolations, timerMode } = data;
 
 
 
@@ -107,7 +108,9 @@ export async function POST(req: Request) {
                 blueprint: blueprint ? JSON.stringify(blueprint) : null,
                 positiveMarks: positiveMarks !== undefined ? positiveMarks : 1,
                 negativeMarks: negativeMarks !== undefined ? negativeMarks : "0",
-                maxViolations: maxViolations !== undefined ? maxViolations : 3
+                maxViolations: maxViolations !== undefined ? maxViolations : 3,
+                timerMode: timerMode || "strict",
+                createdBy: (session?.user as any)?.id || "admin"
             };
 
             if (existingExam) {

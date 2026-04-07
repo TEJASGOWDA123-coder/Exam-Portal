@@ -46,6 +46,7 @@ export type NewSection = typeof sections.$inferInsert;
 export const exams = sqliteTable("exams", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
+  description: text("description"),
   duration: integer("duration").notNull(), // minutes
   totalMarks: integer("total_marks").notNull(),
   startTime: text("start_time").notNull(),
@@ -64,6 +65,8 @@ export const exams = sqliteTable("exams", {
   maxViolations: integer("max_violations").notNull().default(3),
   generatedQuestions: text("generated_questions"), // JSON string for specific student variants
   sebConfigId: text("seb_config_id"), // Reference to seb_configs.id
+  timerMode: text("timer_mode", { enum: ["strict", "flexible"] }).notNull().default("strict"),
+  createdBy: text("created_by").notNull().references(() => users.id),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
@@ -120,12 +123,37 @@ export const submissions = sqliteTable("submissions", {
   ];
 });
 
+// Exam Sessions table to track student start times reliably
+export const examSessions = sqliteTable("exam_sessions", {
+  id: text("id").primaryKey(),
+  examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  usn: text("usn").notNull(),
+  startTime: integer("start_time", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => {
+  return [
+    uniqueIndex("exam_session_usn_unique").on(table.examId, table.usn),
+  ];
+});
+
 // Drizzle Relations for relational queries
 
-export const examsRelations = relations(exams, ({ many }) => ({
+export const examsRelations = relations(exams, ({ many, one }) => ({
   questions: many(questions),
   submissions: many(submissions),
   students: many(students),
+  sessions: many(examSessions),
+  creator: one(users, {
+    fields: [exams.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const examSessionsRelations = relations(examSessions, ({ one }) => ({
+  exam: one(exams, {
+    fields: [examSessions.examId],
+    references: [exams.id],
+  }),
 }));
 
 export const questionsRelations = relations(questions, ({ one }) => ({
@@ -157,6 +185,56 @@ export const sectionsRelations = relations(sections, ({ many }) => ({
   questions: many(questions),
 }));
 
+// Academic reference tables for dropdowns
+export const academicDepartments = sqliteTable("academic_departments", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const academicYears = sqliteTable("academic_years", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  departmentId: text("department_id").notNull().references(() => academicDepartments.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => {
+  return [
+    uniqueIndex("year_name_dept_unique").on(table.name, table.departmentId),
+  ];
+});
+
+export const academicSections = sqliteTable("academic_sections", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  yearId: text("year_id").notNull().references(() => academicYears.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => {
+  return [
+    uniqueIndex("section_name_year_unique").on(table.name, table.yearId),
+  ];
+});
+
+// Relations for easier nested queries
+export const academicDepartmentsRelations = relations(academicDepartments, ({ many }) => ({
+  years: many(academicYears),
+}));
+
+export const academicYearsRelations = relations(academicYears, ({ one, many }) => ({
+  department: one(academicDepartments, {
+    fields: [academicYears.departmentId],
+    references: [academicDepartments.id],
+  }),
+  sections: many(academicSections),
+}));
+
+export const academicSectionsRelations = relations(academicSections, ({ one }) => ({
+  year: one(academicYears, {
+    fields: [academicSections.yearId],
+    references: [academicYears.id],
+  }),
+}));
+
 // Types for TypeScript
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -166,3 +244,8 @@ export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;
 export type Submission = typeof submissions.$inferSelect;
 export type NewSubmission = typeof submissions.$inferInsert;
+export type ExamSession = typeof examSessions.$inferSelect;
+export type NewExamSession = typeof examSessions.$inferInsert;
+export type AcademicDepartment = typeof academicDepartments.$inferSelect;
+export type AcademicYear = typeof academicYears.$inferSelect;
+export type AcademicSection = typeof academicSections.$inferSelect;

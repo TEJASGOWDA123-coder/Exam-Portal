@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Exam, useExam } from "@/hooks/contexts/ExamContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
     Select,
     SelectContent,
@@ -29,7 +30,7 @@ import {
     FileEdit,
     AlignLeft,
     ChevronRight,
-    AlertCircle,
+    AlertCircle,TimerIcon
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -58,6 +59,7 @@ export default function EditExam() {
     const [uploadingSeb, setUploadingSeb] = useState(false);
     const [sectionsConfig, setSectionsConfig] = useState<{ name: string; pickCount: number; duration: number }[]>([]);
     const [availableSections, setAvailableSections] = useState<{ id: string, name: string }[]>([]);
+    const [timerMode, setTimerMode] = useState<"strict" | "flexible">("strict");
     const [loading, setLoading] = useState(true);
 
     const exam = exams.find((e) => e.id === examId);
@@ -79,6 +81,7 @@ export default function EditExam() {
             setPositiveMarks(exam.positiveMarks?.toString() || "1");
             setNegativeMarks(exam.negativeMarks || "0");
             setMaxViolations(exam.maxViolations?.toString() || "3");
+            setTimerMode(exam.timerMode || "strict");
             const mappedSections = (exam.sectionsConfig || []).map(s => ({
                 ...s,
                 duration: s.duration || Math.floor(exam.duration / (exam.sectionsConfig?.length || 1)) || 5
@@ -106,6 +109,7 @@ export default function EditExam() {
                         setPositiveMarks(data.positiveMarks?.toString() || "1");
                         setNegativeMarks(data.negativeMarks || "0");
                         setMaxViolations(data.maxViolations?.toString() || "3");
+                        setTimerMode(data.timerMode || "strict");
                         const mappedSections = (data.sectionsConfig || []).map((s: any) => ({
                             ...s,
                             duration: s.duration || Math.floor(data.duration / (data.sectionsConfig?.length || 1)) || 5
@@ -182,9 +186,9 @@ export default function EditExam() {
         }
     };
 
-    // Auto-calculate end time based on start time and duration
+    // Auto-calculate end time based on start time and duration (only in strict mode)
     useEffect(() => {
-        if (startTime && duration) {
+        if (timerMode === "strict" && startTime && duration) {
             const start = new Date(startTime);
             const durationMinutes = parseInt(duration);
             if (!isNaN(durationMinutes) && durationMinutes > 0) {
@@ -198,7 +202,7 @@ export default function EditExam() {
                 setEndTime(endTimeString);
             }
         }
-    }, [startTime, duration]);
+    }, [startTime, duration, timerMode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -228,6 +232,7 @@ export default function EditExam() {
             negativeMarks: negativeMarks || "0",
             maxViolations: parseInt(maxViolations),
             sectionsConfig: sectionsConfig.length > 0 ? sectionsConfig : undefined,
+            timerMode,
             status: exam?.status || "upcoming",
             questions: exam?.questions || [],
         };
@@ -334,17 +339,24 @@ export default function EditExam() {
                                                 type="datetime-local"
                                                 value={startTime}
                                                 onChange={(e) => setStartTime(e.target.value)}
-                                                className="h-11"
+                                                className={cn("h-11 font-medium", startTime && new Date(startTime) < new Date() && "border-amber-500 focus:ring-amber-500 text-amber-600")}
                                             />
+                                            {startTime && new Date(startTime) < new Date() && (
+                                                <p className="text-[10px] text-amber-600 font-bold mt-1.5 flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+                                                    <AlertCircle className="w-3 h-3" />
+                                                    Note: This date/time is in the past.
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="end">End Time (Auto-calculated)</Label>
+                                            <Label htmlFor="end">End Time {timerMode === 'strict' ? '(Auto-calculated)' : '(Window End)'}</Label>
                                             <Input
                                                 id="end"
                                                 type="datetime-local"
                                                 value={endTime}
-                                                readOnly
-                                                className="h-11 bg-muted/50 text-muted-foreground"
+                                                onChange={(e) => setEndTime(e.target.value)}
+                                                readOnly={timerMode === 'strict'}
+                                                className={`h-11 ${timerMode === 'strict' ? 'bg-muted/50 text-muted-foreground' : ''}`}
                                             />
                                         </div>
                                     </div>
@@ -562,6 +574,36 @@ export default function EditExam() {
                                                 className="w-16 h-10 px-3 rounded-lg bg-background border border-border text-center font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                             />
                                             <span className="text-xs font-bold text-muted-foreground">Alerts</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <TimerIcon className="w-4 h-4 text-primary" />
+                                                <Label className="text-base font-bold">Timer Mode</Label>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {timerMode === "strict" 
+                                                    ? "Strict: Exam ends exactly at the scheduled End Time. Late joiners lose time." 
+                                                    : "Flexible: Full duration given if started within window (still capped by End Time)."}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center bg-muted rounded-lg p-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setTimerMode("strict")}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timerMode === "strict" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                            >
+                                                Strict
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setTimerMode("flexible")}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timerMode === "flexible" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}
+                                            >
+                                                Flexible
+                                            </button>
                                         </div>
                                     </div>
 

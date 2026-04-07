@@ -45,6 +45,7 @@ export interface Exam {
   generatedQuestions?: string | null;
   sectionsConfig?: { name: string; pickCount: number; duration: number }[];
   questions: Question[];
+  timerMode?: "strict" | "flexible";
 }
 
 export interface Student {

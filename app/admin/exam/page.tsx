@@ -39,14 +39,28 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const ExamPage = () => {
     const { exams, deleteExam, updateExam } = useExam();
     const [isDeleting, setIsDeleting] = React.useState(false);
     const [examToDelete, setExamToDelete] = React.useState<{ id: string, title: string } | null>(null);
+    const [currentTime, setCurrentTime] = React.useState(new Date());
 
-    const [rescheduleData, setRescheduleData] = React.useState<{ id: string, title: string, startTime: string, duration: number } | null>(null);
+    const [rescheduleData, setRescheduleData] = React.useState<{ 
+        id: string, 
+        title: string, 
+        startTime: string, 
+        duration: number,
+        endTime?: string,
+        timerMode?: "strict" | "flexible"
+    } | null>(null);
     const [isRescheduling, setIsRescheduling] = React.useState(false);
+
+    React.useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const copyLink = (id: string) => {
         const link = `${window.location.origin}/exam/${id}`;
@@ -86,17 +100,20 @@ const ExamPage = () => {
         const examObj = exams.find(e => e.id === rescheduleData.id);
         if(!examObj) return;
 
-        const start = new Date(rescheduleData.startTime);
-        const end = new Date(start.getTime() + rescheduleData.duration * 60000);
-        
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const endTimeString = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+        let finalEndTime = rescheduleData.endTime;
+
+        if (rescheduleData.timerMode === "strict") {
+            const start = new Date(rescheduleData.startTime);
+            const end = new Date(start.getTime() + rescheduleData.duration * 60000);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            finalEndTime = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+        }
 
         const updatedExam = {
             ...examObj,
             startTime: rescheduleData.startTime,
             duration: rescheduleData.duration,
-            endTime: endTimeString,
+            endTime: finalEndTime || examObj.endTime,
             status: "upcoming" as const
         };
 
@@ -104,7 +121,7 @@ const ExamPage = () => {
         setIsRescheduling(false);
 
         if (success) {
-            toast.success(`Exam rescheduled to ${new Date(rescheduleData.startTime).toLocaleString()}`);
+            toast.success(`Exam rescheduled successfully`);
             setRescheduleData(null);
         } else {
             toast.error("Failed to reschedule exam");
@@ -199,7 +216,14 @@ const ExamPage = () => {
                                             variant="outline"
                                             size="sm"
                                             className="flex-1 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
-                                            onClick={() => setRescheduleData({ id: exam.id, title: exam.title, startTime: exam.startTime, duration: exam.duration })}
+                                            onClick={() => setRescheduleData({ 
+                                                id: exam.id, 
+                                                title: exam.title, 
+                                                startTime: exam.startTime, 
+                                                duration: exam.duration,
+                                                endTime: exam.endTime,
+                                                timerMode: exam.timerMode || "strict"
+                                            })}
                                         >
                                             <Calendar className="w-3.5 h-3.5 mr-2" />
                                             Reschedule
@@ -271,18 +295,41 @@ const ExamPage = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                        <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Client Time (Reference)</span>
+                            <span className="text-xs font-bold text-primary font-mono">{currentTime.toLocaleTimeString()}</span>
+                        </div>
                         <div className="space-y-2">
-                            <Label htmlFor="reschedule-start" className="text-right">
+                            <Label htmlFor="reschedule-start" className="text-right flex items-center justify-between">
                                 New Start Time
+                                {rescheduleData?.startTime && new Date(rescheduleData.startTime) < new Date() && (
+                                    <span className="text-[9px] font-black text-amber-600 uppercase flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" /> Past Date
+                                    </span>
+                                )}
                             </Label>
                             <Input
                                 id="reschedule-start"
                                 type="datetime-local"
                                 value={rescheduleData?.startTime || ""}
                                 onChange={(e) => setRescheduleData(prev => prev ? { ...prev, startTime: e.target.value } : null)}
-                                className="w-full"
+                                className={cn("w-full transition-all", rescheduleData?.startTime && new Date(rescheduleData.startTime) < new Date() && "border-amber-500/50 bg-amber-500/5 text-amber-600")}
                             />
                         </div>
+                        {rescheduleData?.timerMode === "flexible" && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2">
+                                <Label htmlFor="reschedule-end" className="text-right">
+                                    Availability Window End
+                                </Label>
+                                <Input
+                                    id="reschedule-end"
+                                    type="datetime-local"
+                                    value={rescheduleData?.endTime || ""}
+                                    onChange={(e) => setRescheduleData(prev => prev ? { ...prev, endTime: e.target.value } : null)}
+                                    className="w-full"
+                                />
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label htmlFor="reschedule-duration" className="text-right">
                                 Duration (Minutes)

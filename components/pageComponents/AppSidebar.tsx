@@ -66,6 +66,12 @@ const data = {
       badge: null,
     },
     {
+      title: "Academic Data",
+      url: "/admin/academic",
+      icon: GraduationCap,
+      badge: null,
+    },
+    {
       title: "Section Templates",
       url: "/admin/sections",
       icon: LayoutTemplate,
