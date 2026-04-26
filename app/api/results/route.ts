@@ -1,22 +1,62 @@
 import { db } from "@/lib/db";
-import { submissions, exams } from "@/lib/db/schema";
+import { submissions, exams, students, examSessions } from "@/lib/db/schema";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     const session = await auth();
     if (!session || ((session.user as any)?.role !== "admin" && (session.user as any)?.role !== "superadmin")) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const examId = searchParams.get("examId");
+
     try {
+        if (examId) {
+            // Enhanced fetch for specific exam - includes in-progress students
+            const allStudents = await db.query.students.findMany({
+                where: eq(students.examId, examId)
+            });
+            
+            const allSubmissions = await db.query.submissions.findMany({
+                where: eq(submissions.examId, examId)
+            });
+
+            // Map students to submissions
+            const consolidated = allStudents.map(student => {
+                const submission = allSubmissions.find(s => s.usn === student.usn);
+                if (submission) {
+                    return {
+                        ...submission,
+                        status: "submitted"
+                    };
+                }
+                return {
+                    id: student.id,
+                    examId: student.examId,
+                    studentName: student.name,
+                    usn: student.usn,
+                    email: student.email,
+                    class: student.class,
+                    year: student.year,
+                    section: student.section,
+                    score: 0,
+                    violations: 0,
+                    status: "in-progress"
+                };
+            });
+
+            return NextResponse.json(consolidated);
+        }
+
         const result = await db.select().from(submissions);
-        return NextResponse.json(result);
+        return NextResponse.json(result.map(r => ({ ...r, status: "submitted" })));
     } catch (error) {
-        console.error("Failed to fetch submissions:", error);
+        console.error("Failed to fetch consolidated results:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -98,11 +138,14 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: "Missing examId" }, { status: 400 });
         }
 
+        // Clear everything for this exam
         await db.delete(submissions).where(eq(submissions.examId, examId));
+        await db.delete(examSessions).where(eq(examSessions.examId, examId));
+        await db.delete(students).where(eq(students.examId, examId));
 
-        return NextResponse.json({ success: true, message: "All results for this exam have been reset." });
+        return NextResponse.json({ success: true, message: "Exam history reset. Candidates can now re-register or re-take." });
     } catch (error: any) {
-        console.error("Failed to bulk delete results:", error);
+        console.error("Failed to bulk reset exam history:", error);
         return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
     }
 }

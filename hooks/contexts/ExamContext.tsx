@@ -85,7 +85,7 @@ interface ExamContextType {
   updateExam: (exam: Exam) => Promise<boolean>;
   addResult: (result: Partial<Submission>) => Promise<boolean>;
   deleteExam: (id: string) => Promise<boolean>;
-  fetchResults: () => Promise<void>;
+  fetchResults: (examId?: string) => Promise<void>;
   loading: boolean;
   currentExam: Exam | null;
   setCurrentExam: (exam: Exam | null) => void;
@@ -119,9 +119,10 @@ export function ExamProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchResults = async () => {
+  const fetchResults = async (examId?: string) => {
     try {
-      const resp = await fetch("/api/results");
+      const url = examId ? `/api/results?examId=${examId}` : "/api/results";
+      const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
         setResults(data);

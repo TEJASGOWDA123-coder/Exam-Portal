@@ -33,7 +33,7 @@ export default function AdminLogin() {
       });
 
       if (result?.error) {
-        toast.error("Invalid credentials. Use admin@exam.com / admin123");
+        toast.error("Invalid credentials.");
       } else {
         toast.success("Logged in successfully");
         router.push("/admin/dashboard");

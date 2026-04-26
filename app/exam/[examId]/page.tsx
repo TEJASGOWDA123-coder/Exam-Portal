@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { GraduationCap, ShieldCheck, Download, ExternalLink, Clock, AlertCircle } from "lucide-react";
+import { GraduationCap, ShieldCheck, Download, ExternalLink, Clock, AlertCircle, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,9 @@ import { toast } from "sonner";
 import { useExam } from "@/hooks/contexts/ExamContext";
 import { AcademicDepartment, AcademicYear, AcademicSection } from "@/lib/db/schema";
 
-import { signIn } from "next-auth/react";
-
 export default function ExamEntry() {
   const { examId } = useParams();
-  const { exams, registerStudent, student } = useExam();
+  const { exams, registerStudent, student, logoutStudent } = useExam();
   const router = useRouter();
   const exam = exams.find((e) => e.id === examId);
 
@@ -39,9 +37,10 @@ export default function ExamEntry() {
   const [availableYears, setAvailableYears] = useState<AcademicYear[]>([]);
   const [availableSections, setAvailableSections] = useState<AcademicSection[]>([]);
   const [isLoadingAcademic, setIsLoadingAcademic] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -105,7 +104,6 @@ export default function ExamEntry() {
         return;
       }
 
-      // Direct submission check
       const checkResp = await fetch(`/api/results/my-result?examId=${examId}&usn=${usn.trim()}`);
       if (checkResp.ok) {
         const { found } = await checkResp.json();
@@ -137,7 +135,6 @@ export default function ExamEntry() {
     }
   };
 
-  // Add auto-redirect if already logged in and submitted
   useEffect(() => {
     if (student && examId) {
       const checkSubmission = async () => {
@@ -151,7 +148,7 @@ export default function ExamEntry() {
     }
   }, [student, examId, router]);
 
-  const isEntryDisabled = exam?.sebConfigId && !isInSeb;
+  const isEntryDisabled = !!(exam?.sebConfigId && !isInSeb);
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center px-4 py-10 relative">
@@ -178,7 +175,7 @@ export default function ExamEntry() {
               <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-6">
                  <p className="text-xs uppercase tracking-wider font-bold text-primary mb-1">Your Local Time</p>
                  <p className="font-bold text-primary">
-                    {currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' })}
+                    {currentTime ? currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' }) : "Syncing..."}
                  </p>
               </div>
               <Button onClick={() => window.location.reload()} className="w-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20">
@@ -210,7 +207,7 @@ export default function ExamEntry() {
               <div className="bg-slate-500/5 p-4 rounded-xl border border-slate-500/10 mb-2">
                  <p className="text-xs uppercase tracking-wider font-bold text-slate-500 mb-1">Your Local Time</p>
                  <p className="font-bold text-slate-500">
-                    {currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' })}
+                    {currentTime ? currentTime.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' }) : "Syncing..."}
                  </p>
               </div>
            </div>
@@ -220,181 +217,215 @@ export default function ExamEntry() {
       {timeStatus === "active" && (
         <div className="w-full max-w-md animate-slide-up">
           <div className="bg-card rounded-2xl shadow-elevated p-8">
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
-              <GraduationCap className="w-7 h-7 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">{exam.title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {exam.duration} min · {exam.totalMarks} marks
-            </p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="usn">USN / Roll Number</Label>
-                <Input
-                  id="usn"
-                  value={usn}
-                  onChange={(e) => setUsn(e.target.value)}
-                  placeholder="e.g. 1AB21CS001"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
+                <GraduationCap className="w-7 h-7 text-primary" />
               </div>
-              <div className="col-span-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your full name"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="mt-1.5"
-                  disabled={!!isEntryDisabled}
-                />
-              </div>
-              <div>
-                <Label htmlFor="class">Department</Label>
-                <Select 
-                  disabled={!!isEntryDisabled || isLoadingAcademic} 
-                  value={availableDepts.find(d => d.code === className)?.id || ""} 
-                  onValueChange={(id) => {
-                    const dept = availableDepts.find(d => d.id === id);
-                    setClassName(dept?.code || "");
-                    setYear("");
-                    setSection("");
-                  }}
-                >
-                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
-                    <SelectValue placeholder="Select Dept" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {availableDepts.map((d) => (
-                      <SelectItem key={d.id} value={d.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                        {d.name} ({d.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="year">Year</Label>
-                <Select 
-                  disabled={!!isEntryDisabled || isLoadingAcademic || !className} 
-                  value={availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id || ""} 
-                  onValueChange={(id) => {
-                    const y = availableYears.find(i => i.id === id);
-                    setYear(y?.name || "");
-                    setSection("");
-                  }}
-                >
-                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
-                    <SelectValue placeholder={className ? "Select Year" : "Pick Dept first"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {availableYears
-                      .filter(y => y.departmentId === availableDepts.find(d => d.code === className)?.id)
-                      .map((y) => (
-                        <SelectItem key={y.id} value={y.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {y.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="section">Section</Label>
-                <Select 
-                  disabled={!!isEntryDisabled || isLoadingAcademic || !year} 
-                  value={availableSections.find(s => s.name === section && s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)?.id || ""} 
-                  onValueChange={(id) => {
-                    const s = availableSections.find(i => i.id === id);
-                    setSection(s?.name || "");
-                  }}
-                >
-                  <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
-                    <SelectValue placeholder={year ? "Select Section" : "Pick Year first"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {availableSections
-                      .filter(s => s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button type="submit" className="w-full font-semibold h-11 mt-4" disabled={!!isEntryDisabled}>
-              {isEntryDisabled ? "SEB Required to Proceed" : "Continue to Instructions"}
-            </Button>
-          </form>
-        </div>
-
-        {exam.sebConfigId && !isInSeb && (
-          <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-slate-900/90 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-red-500/10">
-                  <ShieldCheck className="w-5 h-5 text-red-500" />
-                </div>
-                <h3 className="font-bold text-white uppercase tracking-wider text-sm">Security Requirement</h3>
-              </div>
-              <p className="text-slate-400 text-xs mb-6 leading-relaxed">
-                This exam is restricted to the <span className="text-white font-bold">Safe Exam Browser</span>. You cannot enter the exam using a standard browser.
+              <h1 className="text-2xl font-bold text-foreground leading-tight">
+                {student ? `Ready, ${student.name.split(' ')[0]}?` : exam.title}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {exam.duration} min · {exam.totalMarks} marks
               </p>
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  className="bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-600/20"
-                  onClick={() => {
-                    const host = window.location.host;
-                    // Using sebs:// for secure HTTPS connection as required by Vercel
-                    window.location.href = `sebs://${host}/api/seb/config/${examId}`;
-                  }}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Launch in SEB
+            </div>
+
+            {student ? (
+              <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Active Profile</span>
+                    <BadgeCheck className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-bold text-lg text-foreground">{student.name}</p>
+                    <p className="text-sm font-medium text-muted-foreground">{student.usn} · {student.class}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => router.push(`/exam/${examId}/instructions`)}
+                    disabled={isEntryDisabled}
+                    className="w-full h-12 rounded-xl font-bold text-lg shadow-lg active:scale-[0.98] transition-all"
+                  >
+                    Confirm & Start
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    onClick={() => logoutStudent()}
+                    className="w-full text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest"
+                  >
+                    Not you? Switch account
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="usn">USN / Roll Number</Label>
+                    <Input
+                      id="usn"
+                      value={usn}
+                      onChange={(e) => setUsn(e.target.value)}
+                      placeholder="e.g. 1AB21CS001"
+                      className="mt-1.5"
+                      disabled={isEntryDisabled}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your full name"
+                      className="mt-1.5"
+                      disabled={isEntryDisabled}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="mt-1.5"
+                      disabled={isEntryDisabled}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="class">Department</Label>
+                    <Select 
+                      disabled={isEntryDisabled || isLoadingAcademic} 
+                      value={availableDepts.find(d => d.code === className)?.id || ""} 
+                      onValueChange={(id) => {
+                        const dept = availableDepts.find(d => d.id === id);
+                        setClassName(dept?.code || "");
+                        setYear("");
+                        setSection("");
+                      }}
+                    >
+                      <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                        <SelectValue placeholder="Select Dept" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {availableDepts.map((d) => (
+                          <SelectItem key={d.id} value={d.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                            {d.name} ({d.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="year">Year</Label>
+                    <Select 
+                      disabled={isEntryDisabled || isLoadingAcademic || !className} 
+                      value={availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id || ""} 
+                      onValueChange={(id) => {
+                        const y = availableYears.find(i => i.id === id);
+                        setYear(y?.name || "");
+                        setSection("");
+                      }}
+                    >
+                      <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                        <SelectValue placeholder={className ? "Select Year" : "Pick Dept first"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {availableYears
+                          .filter(y => y.departmentId === availableDepts.find(d => d.code === className)?.id)
+                          .map((y) => (
+                            <SelectItem key={y.id} value={y.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                              {y.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="section">Section</Label>
+                    <Select 
+                      disabled={isEntryDisabled || isLoadingAcademic || !year} 
+                      value={availableSections.find(s => s.name === section && s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)?.id || ""} 
+                      onValueChange={(id) => {
+                        const s = availableSections.find(i => i.id === id);
+                        setSection(s?.name || "");
+                      }}
+                    >
+                      <SelectTrigger className="mt-1.5 h-10 w-full bg-background border-border">
+                        <SelectValue placeholder={year ? "Select Section" : "Pick Year first"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        {availableSections
+                          .filter(s => s.yearId === availableYears.find(y => y.name === year && y.departmentId === availableDepts.find(d => d.code === className)?.id)?.id)
+                          .map((s) => (
+                            <SelectItem key={s.id} value={s.id} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full font-semibold h-11 mt-4" disabled={isEntryDisabled}>
+                  {isEntryDisabled ? "SEB Required to Proceed" : "Continue to Instructions"}
                 </Button>
-                <div className="flex items-center justify-between gap-3 mt-2">
-                  <a
-                    href={`/api/seb/config/${examId}`}
-                    download
-                    className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+              </form>
+            )}
+          </div>
+
+          {exam.sebConfigId && !isInSeb && (
+            <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-slate-900/90 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-red-500/10">
+                    <ShieldCheck className="w-5 h-5 text-red-500" />
+                  </div>
+                  <h3 className="font-bold text-white uppercase tracking-wider text-sm">Security Requirement</h3>
+                </div>
+                <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+                  This exam is restricted to the <span className="text-white font-bold">Safe Exam Browser</span>. You cannot enter the exam using a standard browser.
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-600/20"
+                    onClick={() => {
+                      const host = window.location.host;
+                      window.location.href = `sebs://${host}/api/seb/config/${examId}`;
+                    }}
                   >
-                    <Download className="w-3 h-3" />
-                    Download Config
-                  </a>
-                  <a
-                    href="https://safeexambrowser.org/download_en.html"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    Install SEB
-                  </a>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Launch in SEB
+                  </Button>
+                  <div className="flex items-center justify-between gap-3 mt-2">
+                    <a
+                      href={`/api/seb/config/${examId}`}
+                      download
+                      className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download Config
+                    </a>
+                    <a
+                      href="https://safeexambrowser.org/download_en.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center gap-1.5 py-2 border border-slate-800 rounded-lg"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Install SEB
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
     </div>
   );

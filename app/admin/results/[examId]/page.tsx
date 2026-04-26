@@ -50,17 +50,20 @@ export default function ViewResults() {
    const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
    const [validatingJustification, setValidatingJustification] = useState<Record<string, boolean>>({});
    const [aiFeedbacks, setAiFeedbacks] = useState<Record<string, any>>({});
+   const [isEditing, setIsEditing] = useState(false);
+   const [editFormData, setEditFormData] = useState<any>(null);
+   const [isUpdating, setIsUpdating] = useState(false);
 
    const currentExam = exams.find((e) => e.id === examId);
 
    // Auto-refresh on mount to ensure we see new submissions
    useEffect(() => {
-      fetchResults();
-   }, []);
+      if (examId) fetchResults(examId as string);
+   }, [examId]);
 
    const handleRefresh = async () => {
       setIsRefreshing(true);
-      await fetchResults();
+      if (examId) await fetchResults(examId as string);
       setIsRefreshing(false);
       toast.success("Consolidated ledger updated");
    };
@@ -72,9 +75,9 @@ export default function ViewResults() {
 
       try {
          const res = await fetch(`/api/results/${id}`, { method: "DELETE" });
-         if (!res.ok) throw new Error("Failed to delete result");
-         toast.success(`${name} rescheduled successfully`);
-         fetchResults();
+         if (!res.ok) throw new Error("Failed to delete record");
+         toast.success(`${name}'s history cleared`);
+         if (examId) fetchResults(examId as string);
       } catch (error) {
          toast.error("Operation failed");
       }
@@ -91,13 +94,37 @@ export default function ViewResults() {
       setIsRefreshing(true);
       try {
          const res = await fetch(`/api/results?examId=${examId}`, { method: "DELETE" });
-         if (!res.ok) throw new Error("Failed to reset results");
-         toast.success("Exam has been rescheduled for all candidates");
-         await fetchResults();
+         if (!res.ok) throw new Error("Failed to reset history");
+         toast.success("Exam history has been completely reset");
+         if (examId) await fetchResults(examId as string);
       } catch (error) {
-         toast.error("Bulk reschedule failed");
+         toast.error("Bulk reset failed");
       } finally {
          setIsRefreshing(false);
+      }
+   };
+
+   const handleUpdateDetails = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editFormData) return;
+      setIsUpdating(true);
+      try {
+         const resp = await fetch(`/api/results/${editFormData.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(editFormData)
+         });
+         if (resp.ok) {
+            toast.success("Candidate record updated successfully");
+            setIsEditing(false);
+            if (examId) fetchResults(examId as string);
+         } else {
+            throw new Error("Update failed");
+         }
+      } catch (err) {
+         toast.error("Failed to update candidate details");
+      } finally {
+         setIsUpdating(false);
       }
    };
 
@@ -214,10 +241,11 @@ export default function ViewResults() {
          </div>
 
          {/* Stats Cards */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[
-               { label: "Total Candidates", value: filtered.length, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
-               { label: "Average Score", value: filtered.length > 0 ? Math.round(filtered.reduce((a, b) => a + b.score, 0) / filtered.length) : 0, icon: BarChart2, color: "text-amber-500", bg: "bg-amber-500/10" },
+               { label: "Total Registered", value: filtered.length, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+               { label: "In Progress", value: filtered.filter(f => (f as any).status === "in-progress").length, icon: RefreshCw, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+               { label: "Average Score", value: filtered.filter(f => (f as any).status === "submitted").length > 0 ? Math.round(filtered.filter(f => (f as any).status === "submitted").reduce((a, b) => a + b.score, 0) / filtered.filter(f => (f as any).status === "submitted").length) : 0, icon: BarChart2, color: "text-amber-500", bg: "bg-amber-500/10" },
                { label: "Integrity Alerts", value: filtered.reduce((a, b) => a + b.violations, 0), icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" }
             ].map((s, idx) => (
                <div key={idx} className="bg-card p-6 rounded-2xl border border-border shadow-card hover:shadow-lg transition-all">
@@ -280,6 +308,7 @@ export default function ViewResults() {
                      <thead>
                         <tr className="border-b border-border bg-muted/30">
                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Candidate</th>
+                           <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Class Info</th>
                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Performance</th>
                            <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
@@ -288,7 +317,7 @@ export default function ViewResults() {
                      <tbody className="divide-y divide-border">
                         {filtered.length === 0 ? (
                            <tr>
-                              <td colSpan={4} className="py-12 text-center text-muted-foreground font-medium">No results found</td>
+                              <td colSpan={5} className="py-12 text-center text-muted-foreground font-medium">No results found</td>
                            </tr>
                         ) : filtered.map((r) => {
                            let scores = {};
@@ -310,6 +339,19 @@ export default function ViewResults() {
                                     </div>
                                  </td>
                                  <td className="px-6 py-4">
+                                     {(r as any).status === "submitted" ? (
+                                        <span className="px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-200 dark:border-emerald-800 flex items-center w-fit gap-1">
+                                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                           Submitted
+                                        </span>
+                                     ) : (
+                                        <span className="px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider border border-indigo-200 dark:border-indigo-800 flex items-center w-fit gap-1">
+                                           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                           In Progress
+                                        </span>
+                                     )}
+                                  </td>
+                                 <td className="px-6 py-4">
                                     <div className="flex flex-wrap gap-2">
                                        <span className="px-2 py-1 rounded bg-muted text-xs font-medium text-foreground border border-border">
                                           {r.class}
@@ -325,7 +367,7 @@ export default function ViewResults() {
                                  <td className="px-6 py-4">
                                     <div className="space-y-2">
                                        <div className="flex items-center gap-2">
-                                          <span className="text-lg font-bold text-foreground">{r.score}</span>
+                                          <span className="text-lg font-bold text-foreground">{(r as any).status === "submitted" ? r.score : "-"}</span>
                                           <span className="text-xs text-muted-foreground">/ {currentExam?.totalMarks}</span>
                                           {r.violations > 0 && (
                                              <span className="ml-2 text-[10px] bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-200 dark:border-red-800">
@@ -342,17 +384,34 @@ export default function ViewResults() {
                                        </div>
                                     </div>
                                  </td>
-                                 <td className="px-6 py-4 text-right space-x-2">
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedSubmission(r)} className="h-8 text-xs font-bold">
-                                       <Eye className="w-3.5 h-3.5 mr-2" /> View
+                                 <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                                    <Button 
+                                       variant="outline" 
+                                       size="sm" 
+                                       onClick={() => setSelectedSubmission(r)} 
+                                       disabled={(r as any).status !== "submitted"}
+                                       className="h-8 text-xs font-bold"
+                                    >
+                                       <Eye className="w-3.5 h-3.5 mr-2" /> View Report
                                     </Button>
+                                    <Button 
+                                       variant="outline" 
+                                       size="sm" 
+                                       onClick={() => {
+                                          setEditFormData(r);
+                                          setIsEditing(true);
+                                       }} 
+                                       className="h-8 text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                     >
+                                        Details
+                                     </Button>
                                     <Button
                                        variant="ghost"
                                        size="sm"
                                        onClick={() => handleReschedule(r.id, r.studentName)}
-                                       className="h-8 text-[10px] font-bold text-red-600 hover:text-white hover:bg-white px-3"
+                                       className="h-8 text-[10px] font-bold text-red-600 hover:text-white hover:bg-red-600 px-3"
                                     >
-                                       <CalendarX className="w-3.5 h-3.5 mr-2" /> Reschedule
+                                       <Trash2 className="w-3.5 h-3.5 mr-2" /> Clear History
                                     </Button>
                                  </td>
                               </tr>
@@ -608,6 +667,79 @@ export default function ViewResults() {
                      </div>
                   </div>
                </div>
+            </DialogContent>
+         </Dialog>
+
+         {/* Edit Details Dialog */}
+         <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogContent className="max-w-md rounded-3xl border-border bg-card">
+               <DialogHeader>
+                  <DialogTitle className="font-bold">Rectify Candidate Details</DialogTitle>
+                  <DialogDescription className="text-xs">
+                     Manually override entry errors for USN and identifying data.
+                  </DialogDescription>
+               </DialogHeader>
+               {editFormData && (
+                  <form onSubmit={handleUpdateDetails} className="space-y-4 pt-4">
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Identity Name</label>
+                           <Input 
+                              value={editFormData.studentName} 
+                              onChange={(e) => setEditFormData({...editFormData, studentName: e.target.value})} 
+                              className="mt-1"
+                           />
+                        </div>
+                        <div className="col-span-2">
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">USN / Roll Number</label>
+                           <Input 
+                              value={editFormData.usn} 
+                              onChange={(e) => setEditFormData({...editFormData, usn: e.target.value})} 
+                              className="mt-1 font-mono uppercase"
+                           />
+                        </div>
+                        <div className="col-span-2">
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</label>
+                           <Input 
+                              type="email"
+                              value={editFormData.email} 
+                              onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} 
+                              className="mt-1"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Department</label>
+                           <Input 
+                              value={editFormData.class} 
+                              onChange={(e) => setEditFormData({...editFormData, class: e.target.value})} 
+                              className="mt-1"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Year</label>
+                           <Input 
+                              value={editFormData.year} 
+                              onChange={(e) => setEditFormData({...editFormData, year: e.target.value})} 
+                              className="mt-1"
+                           />
+                        </div>
+                        <div className="col-span-2">
+                           <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Academic Section</label>
+                           <Input 
+                              value={editFormData.section} 
+                              onChange={(e) => setEditFormData({...editFormData, section: e.target.value})} 
+                              className="mt-1"
+                           />
+                        </div>
+                     </div>
+                     <div className="flex justify-end gap-3 pt-4">
+                        <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="font-bold">Cancel</Button>
+                        <Button type="submit" disabled={isUpdating} className="bg-primary font-bold shadow-lg shadow-primary/20">
+                           {isUpdating ? "Updating..." : "Commit Changes"}
+                        </Button>
+                     </div>
+                  </form>
+               )}
             </DialogContent>
          </Dialog>
       </div>

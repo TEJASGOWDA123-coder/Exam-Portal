@@ -11,8 +11,8 @@ async function testTiming() {
     id: strictId,
     title: "Test Strict Timing",
     duration: 10,
-    startTime: new Date(now.getTime() - 5 * 60000), // 5 mins ago
-    endTime: new Date(now.getTime() + 5 * 60000),   // 5 mins from now
+    startTime: new Date(now.getTime() - 5 * 60000).toISOString(), // 5 mins ago
+    endTime: new Date(now.getTime() + 5 * 60000).toISOString(),   // 5 mins from now
     totalMarks: 10,
     status: "active",
     createdBy: "superadmin-1",
@@ -26,8 +26,8 @@ async function testTiming() {
     id: flexibleId,
     title: "Test Flexible Timing",
     duration: 10,
-    startTime: new Date(now.getTime() - 5 * 60000), // 5 mins ago
-    endTime: new Date(now.getTime() + 55 * 60000),  // 55 mins from now
+    startTime: new Date(now.getTime() - 5 * 60000).toISOString(), // 5 mins ago
+    endTime: new Date(now.getTime() + 55 * 60000).toISOString(),  // 55 mins from now
     totalMarks: 10,
     status: "active",
     createdBy: "superadmin-1",

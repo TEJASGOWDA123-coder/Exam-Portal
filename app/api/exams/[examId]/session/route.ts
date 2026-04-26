@@ -27,7 +27,13 @@ export async function GET(
             return NextResponse.json({ found: false });
         }
 
-        return NextResponse.json({ found: true, startTime: session.startTime });
+        return NextResponse.json({ 
+            found: true, 
+            startTime: session.startTime,
+            answers: session.answers ? JSON.parse(session.answers) : null,
+            justifications: session.justifications ? JSON.parse(session.justifications) : null,
+            violations: session.violations
+        });
     } catch (error) {
         console.error("Failed to fetch session:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -72,6 +78,37 @@ export async function POST(
         return NextResponse.json({ success: true, startTime });
     } catch (error) {
         console.error("Failed to create session:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}
+
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ examId: string }> }
+) {
+    const { examId } = await params;
+    const { usn, answers, justifications, violations } = await req.json();
+
+    if (!usn || !examId) {
+        return NextResponse.json({ error: "Missing USN or ExamId" }, { status: 400 });
+    }
+
+    try {
+        await db.update(examSessions)
+            .set({
+                answers: JSON.stringify(answers),
+                justifications: JSON.stringify(justifications),
+                violations: violations,
+                lastSync: new Date()
+            })
+            .where(and(
+                eq(examSessions.examId, examId),
+                eq(examSessions.usn, usn)
+            ));
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Failed to sync session:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

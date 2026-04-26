@@ -59,7 +59,7 @@ export default function PublicStartPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 selection:bg-emerald-500/30 relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-black py-12 px-4 selection:bg-emerald-500/30 relative overflow-hidden flex items-center justify-center">
       {/* Animated Background Blobs */}
       <div className="blob w-[500px] h-[500px] bg-emerald-500/20 -top-20 -left-20 animate-float" />
       <div className="blob w-[400px] h-[400px] bg-blue-500/20 -bottom-20 -right-20 animate-float [animation-delay:2s]" />
@@ -68,7 +68,7 @@ export default function PublicStartPage() {
       <div className="max-w-2xl w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
 
         {/* Header Section - Glassmorphic */}
-        <div className="p-8 rounded-3xl glass relative overflow-hidden group">
+        <div className="p-8 rounded-3xl bg-slate-50 border border-primary/20 dark:bg-primary/5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
             <ShieldCheck className="h-48 w-48 text-emerald-500 rotate-12" />
           </div>
@@ -96,7 +96,7 @@ export default function PublicStartPage() {
             </div>
 
             <div className="pt-4">
-              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center transition-colors hover:border-emerald-500/30">
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-primary/5 shadow-sm border border-slate-100 dark:border-primary flex flex-col items-center justify-center text-center transition-colors hover:border-emerald-500/30">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Duration</span>
                 <span className="text-2xl font-bold text-slate-900 dark:text-white">{exam.duration} Minutes</span>
               </div>
@@ -105,7 +105,7 @@ export default function PublicStartPage() {
         </div>
 
         {/* Action Section */}
-        <div className="p-2 rounded-[2rem] glass relative group/btn overflow-hidden transition-all duration-300">
+        <div className="p-2 rounded-[2rem]  relative group/btn overflow-hidden transition-all duration-300">
           <div className="flex flex-col gap-4 relative z-10">
             <Button
               asChild

@@ -129,6 +129,10 @@ export const examSessions = sqliteTable("exam_sessions", {
   examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
   usn: text("usn").notNull(),
   startTime: integer("start_time", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  answers: text("answers"), // JSON string: { [questionId: string]: any }
+  justifications: text("justifications"), // JSON string: { [questionId: string]: string }
+  violations: integer("violations").default(0),
+  lastSync: integer("last_sync", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 }, (table) => {
   return [

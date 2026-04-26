@@ -150,7 +150,7 @@ export default function Instructions() {
             {rules.map((rule, i) => (
               <div
                 key={i}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-card border border-slate-100 dark:border-slate-800/60 hover:bg-white dark:hover:bg-slate-950/60 transition-all duration-200"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-white/50 dark:bg-card border border-slate-100 dark:border-slate-800/60 hover:bg-white dark:hover:bg-primary/5 transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-emerald-500/20 flex items-center justify-center shadow-sm shrink-0 border border-slate-100 dark:border-slate-800">
                   <rule.icon className="w-4.5 h-4.5 text-emerald-500" />

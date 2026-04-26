@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/pageComponents/ModeToggle";
-import { AlertTriangle, ChevronLeft, ChevronRight, Send, Lock, ShieldAlert, ShieldCheck, Timer as TimerIcon, HelpCircle, ClipboardList } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Send, Lock, ShieldAlert, ShieldCheck, Timer as TimerIcon, HelpCircle, ClipboardList, Cloud, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -73,6 +73,8 @@ export default function LiveExamPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const storageKey = student ? `exam_prog_${examId}_${student.usn}` : null;
@@ -114,6 +116,9 @@ export default function LiveExamPage() {
           setViolations(parsed.violations || 0);
           setCurrentQ(parsed.currentQ || 0);
           setCurrentSectionIndex(parsed.currentSectionIndex || 0);
+          if (parsed.actualStartTime) {
+            setActualStartTime(new Date(parsed.actualStartTime));
+          }
           setPreCheck(false); 
           setIsDataLoaded(true);
           return;
@@ -179,22 +184,88 @@ export default function LiveExamPage() {
     syncSession();
   }, [exam, student, examId, isDataLoaded]);
 
-  // Auto-Save Effect
+  // Cloud Restoration Effect
+  useEffect(() => {
+    if (!exam || !student || isDataLoaded) return;
+
+    const checkCloudSession = async () => {
+      const saved = storageKey ? localStorage.getItem(storageKey) : null;
+      if (saved) return; // Local storage takes priority as it's more immediate
+
+      try {
+        const resp = await fetch(`/api/exams/${examId}/session?usn=${student.usn}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.found) {
+            if (data.startTime) setActualStartTime(new Date(data.startTime));
+            if (data.answers) {
+              setAnswers(data.answers || {});
+              setJustifications(data.justifications || {});
+              setViolations(data.violations || 0);
+              toast.success("Exam session restored from secure cloud backup");
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Cloud restore failed", err);
+      }
+    };
+    checkCloudSession();
+  }, [exam, student, examId, isDataLoaded, storageKey]);
+
+  // Auto-Save Effect (Local)
   useEffect(() => {
     if (!isDataLoaded || !storageKey || submitted || !shuffledQuestions.length) return;
 
     const sessionData = {
       shuffledQuestionIds: shuffledQuestions.map(q => q.id),
       answers,
+      justifications,
       visited: Array.from(visited),
       markedForReview: Array.from(markedForReview),
       violations,
       currentQ,
       currentSectionIndex,
+      actualStartTime: actualStartTime?.toISOString(),
     };
 
     localStorage.setItem(storageKey, JSON.stringify(sessionData));
-  }, [shuffledQuestions, answers, visited, markedForReview, violations, currentQ, currentSectionIndex, storageKey, isDataLoaded, submitted]);
+  }, [shuffledQuestions, answers, justifications, visited, markedForReview, violations, currentQ, currentSectionIndex, storageKey, isDataLoaded, submitted, actualStartTime]);
+
+  // Background Sync Effect (Cloud - Every 60 seconds)
+  useEffect(() => {
+    if (!isDataLoaded || !student || !examId || submitted) return;
+
+    const performSync = async () => {
+      try {
+        setIsSyncing(true);
+        const resp = await fetch(`/api/exams/${examId}/session`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usn: student.usn,
+            answers,
+            justifications,
+            violations,
+          }),
+        });
+        if (resp.ok) setLastSyncTime(new Date());
+      } catch (err) {
+        console.error("Background sync failed", err);
+      } finally {
+        setTimeout(() => setIsSyncing(false), 2000); // Maintain visibility for 2s
+      }
+    };
+
+    // Initial sync after 5s
+    const initialSync = setTimeout(performSync, 5000);
+    const syncInterval = setInterval(performSync, 60000);
+
+    return () => {
+      clearTimeout(initialSync);
+      clearInterval(syncInterval);
+    };
+  }, [isDataLoaded, student, examId, submitted, answers, justifications, violations]);
 
   // Initial fullscreen check
   useEffect(() => {
@@ -683,6 +754,7 @@ export default function LiveExamPage() {
                     Neural Monitor Active
                   </span>
                 )}
+                {/* Sync status moved to the right */}
                 {(exam.positiveMarks !== undefined || exam.negativeMarks !== undefined) && (
                   <span className="text-[10px] bg-white dark:bg-slate-900 shadow-sm border border-border text-muted-foreground px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-3">
                     <div className="flex items-center gap-1.5">
@@ -700,12 +772,26 @@ export default function LiveExamPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 bg-muted px-4 py-2 rounded-2xl border border-border">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {isSyncing ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">Syncing</span>
+                </div>
+              ) : lastSyncTime ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 transition-all">
+                  <Cloud className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Saved {lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-3 bg-primary/5 dark:bg-primary/5 px-4 py-2 rounded-2xl border border-slate-800 shadow-xl">
               <TimerIcon className="w-4 h-4 text-primary" />
               {/* Reset timer per section or when session loads */}
               {(!exam.strictSectionTiming && !actualStartTime) ? (
-                <span className="text-sm font-bold animate-pulse">Syncing...</span>
+                <span className="text-sm font-bold animate-pulse text-muted-foreground whitespace-nowrap">Connecting...</span>
               ) : (
                 <Timer
                   key={exam.strictSectionTiming ? `${activeSection}_${actualStartTime?.getTime()}` : `${exam.id}_${actualStartTime?.getTime()}`}
@@ -1018,42 +1104,50 @@ export default function LiveExamPage() {
       </AlertDialog>
 
       <AlertDialog open={showFullscreenEnforcer} onOpenChange={() => { }}>
-        <AlertDialogContent className=" rounded-[2rem] border-none shadow-2xl bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-2xl max-w-lg p-0 overflow-hidden">
+        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl bg-slate-50/95 dark:bg-[#030711]/95 backdrop-blur-2xl max-w-lg p-0 overflow-hidden dark:bg-primary/5">
           <AlertDialogHeader className="sr-only">
             <AlertDialogTitle>Security Protocol Violation</AlertDialogTitle>
             <AlertDialogDescription>Fullscreen mode has been disabled. Please re-enable it to continue.</AlertDialogDescription>
           </AlertDialogHeader>
+          
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="blob w-[300px] h-[300px] bg-red-500/10 -top-20 -left-20 animate-float opacity-50" />
             <div className="blob w-[200px] h-[200px] bg-amber-500/10 -bottom-20 -right-20 animate-float [animation-delay:2s] opacity-50" />
           </div>
 
-          <div className="relative p-10 flex flex-col items-center text-center gap-6">
-            <div className="h-20 w-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-600 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.15)] animate-pulse">
-              <ShieldAlert className="w-10 h-10" />
+          <div className="relative p-12 flex flex-col items-center text-center gap-8">
+            <div className="h-24 w-24 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-600 border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.2)] animate-pulse">
+              <ShieldAlert className="w-12 h-12" />
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Security Protocol Violation</h2>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-[320px] mx-auto">
-                Fullscreen mode has been disabled. This is recorded as a security breach.
+            <div className="space-y-3">
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">Security Breach</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-[340px] mx-auto leading-relaxed">
+                Fullscreen mode termination detected. This event has been logged as a protocol violation.
               </p>
             </div>
 
-            <div className="w-full p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-[11px] font-bold text-amber-600 uppercase tracking-widest">
-              Please re-enable fullscreen to continue the session
+            <div className="w-full p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-center justify-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                <div className="w-1 h-1 bg-amber-600 rounded-full animate-ping" />
+                Re-enable fullscreen to resume session
+              </div>
             </div>
 
             <Button
               onClick={enterFullscreen}
-              className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest shadow-[0_10px_25px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full h-14 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest shadow-[0_20px_40px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              Re-enable Fullscreen
+              Restore Secure Mode
             </Button>
 
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
-              Violation {violations}/{exam?.maxViolations || 3} Recorded
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="h-[1px] w-8 bg-slate-200 dark:bg-slate-800" />
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                Violation {violations}/{exam?.maxViolations || 3} Recorded
+              </span>
+              <div className="h-[1px] w-8 bg-slate-200 dark:bg-slate-800" />
+            </div>
           </div>
         </AlertDialogContent>
       </AlertDialog>
